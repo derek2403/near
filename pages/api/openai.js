@@ -49,18 +49,22 @@ const findClosestMatch = (input, type = 'chain') => {
 const extractTransferParameters = async (content, openaiApiKey) => {
   try {
     const systemPrompt = `You are a helpful assistant that extracts transfer parameters from user messages.
-    Analyze the message and extract the following parameters in a JSON format:
+    Analyze the message and extract ONLY the following parameters in a JSON format:
     {
-      "originchain": "string (one of: ${supportedChains.chains.map(c => c.name).join(', ')})",
+      "amount": "number (the amount to transfer)",
+      "currency": "string (one of: ${supportedChains.chains.map(c => c.symbol).join(', ')})",
       "destchain": "string (one of: ${supportedChains.chains.map(c => c.name).join(', ')})",
-      "originwallet": "string (Ethereum address starting with 0x)",
-      "destwallet": "string (Ethereum address starting with 0x)",
-      "amount": "number",
-      "currency": "string (one of: ${supportedChains.chains.map(c => c.symbol).join(', ')})"
+      "destwallet": "string (Ethereum address starting with 0x)"
     }
 
-    If you see "ETH" or similar variations, use "ETH" as the currency.
-    If you see "MATIC" or similar variations, use "MATIC" as the currency.
+    Example input: "Transfer 1.5 ETH to 0x742d... on Polygon"
+    Example output: {
+      "amount": 1.5,
+      "currency": "ETH",
+      "destchain": "Polygon",
+      "destwallet": "0x742d..."
+    }
+
     If any parameter is unclear or missing, set it to null.
     Only respond with the JSON object, nothing else.`;
 
@@ -90,36 +94,16 @@ const extractTransferParameters = async (content, openaiApiKey) => {
     } catch (e) {
       console.error('Failed to parse OpenAI response:', e);
       parameters = {
-        originchain: null,
-        destchain: null,
-        originwallet: null,
-        destwallet: null,
         amount: null,
-        currency: null
+        currency: null,
+        destchain: null,
+        destwallet: null
       };
     }
 
     // Enhanced suggestions logic
     const suggestions = {};
     
-    // Check origin chain
-    if (parameters.originchain) {
-      const exactChain = supportedChains.chains.find(
-        c => c.name.toLowerCase() === parameters.originchain.toLowerCase() ||
-            c.aliases.includes(parameters.originchain.toLowerCase())
-      );
-      
-      if (!exactChain) {
-        const suggestedChain = findClosestMatch(parameters.originchain, 'chain');
-        if (suggestedChain) {
-          suggestions.originChain = {
-            found: parameters.originchain,
-            suggested: suggestedChain
-          };
-        }
-      }
-    }
-
     // Check destination chain
     if (parameters.destchain) {
       const exactChain = supportedChains.chains.find(
@@ -155,28 +139,6 @@ const extractTransferParameters = async (content, openaiApiKey) => {
       }
     }
 
-    // Update parameters with suggestions if they're very close matches
-    if (suggestions.originChain && calculateSimilarity(
-      suggestions.originChain.found.toLowerCase(),
-      suggestions.originChain.suggested.toLowerCase()
-    ) > 0.8) {
-      parameters.originchain = suggestions.originChain.suggested;
-    }
-
-    if (suggestions.destChain && calculateSimilarity(
-      suggestions.destChain.found.toLowerCase(),
-      suggestions.destChain.suggested.toLowerCase()
-    ) > 0.8) {
-      parameters.destchain = suggestions.destChain.suggested;
-    }
-
-    if (suggestions.currency && calculateSimilarity(
-      suggestions.currency.found.toLowerCase(),
-      suggestions.currency.suggested.toLowerCase()
-    ) > 0.8) {
-      parameters.currency = suggestions.currency.suggested;
-    }
-
     return {
       isComplete: !Object.values(parameters).includes(null),
       needsConfirmation: Object.keys(suggestions).length > 0,
@@ -190,12 +152,10 @@ const extractTransferParameters = async (content, openaiApiKey) => {
       isComplete: false,
       needsConfirmation: false,
       params: {
-        originchain: null,
-        destchain: null,
-        originwallet: null,
-        destwallet: null,
         amount: null,
-        currency: null
+        currency: null,
+        destchain: null,
+        destwallet: null
       },
       suggestions: {}
     };
