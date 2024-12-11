@@ -1,36 +1,18 @@
 import { useState } from 'react';
+import Transfer from '../components/Transfer';
 
 export default function Chatbot() {
   const [input, setInput] = useState('');
   const [response, setResponse] = useState('');
   const [action, setAction] = useState('');
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferParams, setTransferParams] = useState(null);
 
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    // Identify the action using a switch statement
-    let detectedAction = '';
-    const keywords = input.toLowerCase();
-
-    switch (true) {
-      case keywords.includes('transfer'):
-        detectedAction = 'transfer';
-        break;
-      case keywords.includes('create wallet'):
-        detectedAction = 'create_wallet';
-        break;
-      case keywords.includes('view balance'):
-        detectedAction = 'view_balance';
-        break;
-      default:
-        detectedAction = 'unknown';
-    }
-
-    setAction(detectedAction);
-
-    // Send the input to the backend if needed
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/openai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,11 +21,37 @@ export default function Chatbot() {
       });
 
       const data = await res.json();
-      setResponse(data.result || 'No response from the API');
+      
+      if (data.type === 'transfer') {
+        setAction('transfer');
+        if (data.params.isComplete) {
+          setTransferParams(data.params.params);
+          setShowTransfer(true);
+          setResponse('Processing transfer request...');
+        } else {
+          setResponse('Some parameters are missing. Here\'s what I detected:\n' +
+            JSON.stringify(data.params.params, null, 2));
+        }
+      } else {
+        setAction('chat');
+        setResponse(data.result || 'No response from the API');
+      }
     } catch (error) {
       console.error('Error communicating with API:', error);
       setResponse('An error occurred.');
     }
+  };
+
+  const handleTransferClose = () => {
+    setShowTransfer(false);
+    setTransferParams(null);
+    setInput('');
+    setResponse('Transfer cancelled.');
+  };
+
+  const handleTransferRetry = () => {
+    setShowTransfer(false);
+    setResponse('Please provide all required transfer information: origin chain, destination chain, origin wallet address, and destination wallet address.');
   };
 
   return (
@@ -62,6 +70,14 @@ export default function Chatbot() {
         <strong>Response:</strong>
         <p>{response}</p>
       </div>
+
+      {showTransfer && (
+        <Transfer
+          transferParams={transferParams}
+          onClose={handleTransferClose}
+          onRetry={handleTransferRetry}
+        />
+      )}
     </div>
   );
 }

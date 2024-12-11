@@ -1,0 +1,84 @@
+{
+  "chains": [
+    {
+      "name": "Ethereum",
+      "chainId": 1,
+      "rpcUrl": "https://eth-mainnet.g.alchemy.com/v2/your-api-key",
+      "symbol": "ETH",
+      "explorer": "https://etherscan.io",
+      "aliases": ["eth", "ethereum", "ether"]
+    },
+    {
+      "name": "Polygon",
+      "chainId": 137,
+      "rpcUrl": "https://polygon-mainnet.g.alchemy.com/v2/your-api-key",
+      "symbol": "MATIC",
+      "explorer": "https://polygonscan.com",
+      "aliases": ["poly", "polygon", "matic"]
+    },
+    {
+      "name": "BNB Smart Chain",
+      "chainId": 56,
+      "rpcUrl": "https://bsc-dataseed1.binance.org",
+      "symbol": "BNB",
+      "explorer": "https://bscscan.com",
+      "aliases": ["bsc", "binance", "bnb"]
+    },
+    {
+      "name": "Arbitrum One",
+      "chainId": 42161,
+      "rpcUrl": "https://arb-mainnet.g.alchemy.com/v2/your-api-key",
+      "symbol": "ETH",
+      "explorer": "https://arbiscan.io",
+      "aliases": ["arb", "arbitrum"]
+    },
+    {
+      "name": "Optimism",
+      "chainId": 10,
+      "rpcUrl": "https://opt-mainnet.g.alchemy.com/v2/your-api-key",
+      "symbol": "ETH",
+      "explorer": "https://optimistic.etherscan.io",
+      "aliases": ["opt", "optimism"]
+    },
+    {
+      "name": "Avalanche",
+      "chainId": 43114,
+      "rpcUrl": "https://api.avax.network/ext/bc/C/rpc",
+      "symbol": "AVAX",
+      "explorer": "https://snowtrace.io",
+      "aliases": ["avax", "avalanche"]
+    },
+    {
+      "name": "Fantom",
+      "chainId": 250,
+      "rpcUrl": "https://rpc.ftm.tools",
+      "symbol": "FTM",
+      "explorer": "https://ftmscan.com",
+      "aliases": ["ftm", "fantom"]
+    },
+    {
+      "name": "Base",
+      "chainId": 8453,
+      "rpcUrl": "https://mainnet.base.org",
+      "symbol": "ETH",
+      "explorer": "https://basescan.org",
+      "aliases": ["base"]
+    },
+    {
+      "name": "zkSync Era",
+      "chainId": 324,
+      "rpcUrl": "https://mainnet.era.zksync.io",
+      "symbol": "ETH",
+      "explorer": "https://explorer.zksync.io",
+      "aliases": ["zksync", "era", "zks"]
+    },
+    {
+      "name": "Linea",
+      "chainId": 59144,
+      "rpcUrl": "https://rpc.linea.build",
+      "symbol": "ETH",
+      "explorer": "https://lineascan.build",
+      "aliases": ["linea"]
+    }
+  ]
+}
