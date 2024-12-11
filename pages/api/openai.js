@@ -1,5 +1,51 @@
 import supportedChains from '../../data/supportedChain.json';
 
+const findClosestMatch = (input, type = 'chain') => {
+  if (!input) return null;
+  
+  let bestMatch = null;
+  let highestScore = 0;
+  const inputLower = input.toLowerCase();
+
+  supportedChains.chains.forEach(chain => {
+    if (type === 'chain') {
+      // Check exact matches first
+      if (chain.name.toLowerCase() === inputLower || 
+          chain.aliases.includes(inputLower)) {
+        return chain.name;
+      }
+
+      // Check name similarity
+      const nameScore = calculateSimilarity(inputLower, chain.name.toLowerCase());
+      
+      // Check aliases similarity
+      const aliasScores = chain.aliases.map(alias => 
+        calculateSimilarity(inputLower, alias.toLowerCase())
+      );
+      
+      const bestScore = Math.max(nameScore, ...aliasScores);
+      
+      if (bestScore > highestScore && bestScore > 0.6) {
+        highestScore = bestScore;
+        bestMatch = chain.name;
+      }
+    } else if (type === 'currency') {
+      // Check exact matches first
+      if (chain.symbol.toLowerCase() === inputLower) {
+        return chain.symbol;
+      }
+
+      const score = calculateSimilarity(inputLower, chain.symbol.toLowerCase());
+      if (score > highestScore && score > 0.6) {
+        highestScore = score;
+        bestMatch = chain.symbol;
+      }
+    }
+  });
+
+  return bestMatch;
+};
+
 const extractTransferParameters = async (content, openaiApiKey) => {
   try {
     const systemPrompt = `You are a helpful assistant that extracts transfer parameters from user messages.
@@ -53,14 +99,82 @@ const extractTransferParameters = async (content, openaiApiKey) => {
       };
     }
 
-    // Add validation and suggestions logic...
+    // Enhanced suggestions logic
     const suggestions = {};
     
-    if (parameters.currency === 'EH') {
-      suggestions.currency = {
-        found: 'EH',
-        suggested: 'ETH'
-      };
+    // Check origin chain
+    if (parameters.originchain) {
+      const exactChain = supportedChains.chains.find(
+        c => c.name.toLowerCase() === parameters.originchain.toLowerCase() ||
+            c.aliases.includes(parameters.originchain.toLowerCase())
+      );
+      
+      if (!exactChain) {
+        const suggestedChain = findClosestMatch(parameters.originchain, 'chain');
+        if (suggestedChain) {
+          suggestions.originChain = {
+            found: parameters.originchain,
+            suggested: suggestedChain
+          };
+        }
+      }
+    }
+
+    // Check destination chain
+    if (parameters.destchain) {
+      const exactChain = supportedChains.chains.find(
+        c => c.name.toLowerCase() === parameters.destchain.toLowerCase() ||
+            c.aliases.includes(parameters.destchain.toLowerCase())
+      );
+      
+      if (!exactChain) {
+        const suggestedChain = findClosestMatch(parameters.destchain, 'chain');
+        if (suggestedChain) {
+          suggestions.destChain = {
+            found: parameters.destchain,
+            suggested: suggestedChain
+          };
+        }
+      }
+    }
+
+    // Check currency
+    if (parameters.currency) {
+      const exactCurrency = supportedChains.chains.find(
+        c => c.symbol.toLowerCase() === parameters.currency.toLowerCase()
+      );
+      
+      if (!exactCurrency) {
+        const suggestedCurrency = findClosestMatch(parameters.currency, 'currency');
+        if (suggestedCurrency) {
+          suggestions.currency = {
+            found: parameters.currency,
+            suggested: suggestedCurrency
+          };
+        }
+      }
+    }
+
+    // Update parameters with suggestions if they're very close matches
+    if (suggestions.originChain && calculateSimilarity(
+      suggestions.originChain.found.toLowerCase(),
+      suggestions.originChain.suggested.toLowerCase()
+    ) > 0.8) {
+      parameters.originchain = suggestions.originChain.suggested;
+    }
+
+    if (suggestions.destChain && calculateSimilarity(
+      suggestions.destChain.found.toLowerCase(),
+      suggestions.destChain.suggested.toLowerCase()
+    ) > 0.8) {
+      parameters.destchain = suggestions.destChain.suggested;
+    }
+
+    if (suggestions.currency && calculateSimilarity(
+      suggestions.currency.found.toLowerCase(),
+      suggestions.currency.suggested.toLowerCase()
+    ) > 0.8) {
+      parameters.currency = suggestions.currency.suggested;
     }
 
     return {
