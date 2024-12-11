@@ -1,22 +1,80 @@
 import supportedChains from '../../data/supportedChain.json';
 
+// Helper function to handle common typos and find closest matches
+function findClosestMatch(input, type = 'chain') {
+  if (!input) return null;
+  
+  const inputLower = input.toLowerCase();
+  let matches = [];
+
+  supportedChains.chains.forEach(chain => {
+    if (type === 'chain') {
+      // Check exact matches first
+      if (chain.name.toLowerCase() === inputLower || 
+          chain.aliases.includes(inputLower)) {
+        matches.push({ name: chain.name, score: 1 });
+        return;
+      }
+
+      // Check similarity with chain name
+      const nameScore = calculateSimilarity(inputLower, chain.name.toLowerCase());
+      
+      // Check similarity with aliases
+      const aliasScores = chain.aliases.map(alias => ({
+        score: calculateSimilarity(inputLower, alias.toLowerCase()),
+        name: chain.name
+      }));
+
+      matches.push({ name: chain.name, score: nameScore });
+      matches.push(...aliasScores);
+
+    } else if (type === 'currency') {
+      // Check exact matches first
+      if (chain.symbol.toLowerCase() === inputLower) {
+        matches.push({ name: chain.symbol, score: 1 });
+        return;
+      }
+
+      const score = calculateSimilarity(inputLower, chain.symbol.toLowerCase());
+      matches.push({ name: chain.symbol, score });
+    }
+  });
+
+  // Sort matches by score and get the best match
+  matches.sort((a, b) => b.score - a.score);
+  const bestMatch = matches[0];
+
+  if (!bestMatch || bestMatch.score < 0.6) {
+    return null;
+  }
+
+  return {
+    match: bestMatch.name,
+    score: bestMatch.score,
+    needsConfirmation: bestMatch.score < 0.9
+  };
+}
+
 const extractTransferParameters = async (content, openaiApiKey) => {
   try {
     const systemPrompt = `You are a helpful assistant that extracts transfer parameters from user messages.
-    Analyze the message and extract the following parameters in a JSON format:
+    Analyze the message and extract ONLY the following parameters in a JSON format:
     {
-      "originchain": "string (one of: ${supportedChains.chains.map(c => c.name).join(', ')})",
+      "amount": "number (the amount to transfer)",
+      "currency": "string (one of: ${supportedChains.chains.map(c => c.symbol).join(', ')})",
       "destchain": "string (one of: ${supportedChains.chains.map(c => c.name).join(', ')})",
-      "originwallet": "string (Ethereum address starting with 0x)",
-      "destwallet": "string (Ethereum address starting with 0x)",
-      "amount": "number",
-      "currency": "string (one of: ${supportedChains.chains.map(c => c.symbol).join(', ')})"
+      "destwallet": "string (Ethereum address starting with 0x)"
     }
 
-    If you see "ETH" or similar variations, use "ETH" as the currency.
-    If you see "MATIC" or similar variations, use "MATIC" as the currency.
-    If any parameter is unclear or missing, set it to null.
-    Only respond with the JSON object, nothing else.`;
+    Valid chains and their aliases:
+    ${supportedChains.chains.map(c => 
+      `${c.name}: ${[c.name.toLowerCase(), ...c.aliases].join(', ')}`
+    ).join('\n')}
+
+    Valid currencies: ${supportedChains.chains.map(c => c.symbol).join(', ')}
+
+    If you see a typo or similar word, match it to the closest valid value.
+    If any parameter is unclear or missing, set it to null.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -36,7 +94,12 @@ const extractTransferParameters = async (content, openaiApiKey) => {
     });
 
     const data = await response.json();
-    console.log('OpenAI Response:', data); // Debug log
+    
+    // Check if the API response is valid
+    if (!data || !data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
+      console.error('Invalid API response:', data);
+      throw new Error('Invalid API response structure');
+    }
 
     let parameters;
     try {
@@ -44,29 +107,47 @@ const extractTransferParameters = async (content, openaiApiKey) => {
     } catch (e) {
       console.error('Failed to parse OpenAI response:', e);
       parameters = {
-        originchain: null,
-        destchain: null,
-        originwallet: null,
-        destwallet: null,
         amount: null,
-        currency: null
+        currency: null,
+        destchain: null,
+        destwallet: null
       };
     }
 
-    // Add validation and suggestions logic...
+    // Process the parameters
     const suggestions = {};
-    
-    if (parameters.currency === 'EH') {
-      suggestions.currency = {
-        found: 'EH',
-        suggested: 'ETH'
-      };
+    const processedParams = { ...parameters };
+
+    // Check destination chain
+    if (parameters.destchain) {
+      const chainMatch = findClosestMatch(parameters.destchain, 'chain');
+      if (chainMatch && chainMatch.needsConfirmation) {
+        suggestions.destChain = {
+          found: parameters.destchain,
+          suggested: chainMatch.match,
+          confidence: Math.round(chainMatch.score * 100) + '%'
+        };
+        processedParams.destchain = chainMatch.match;
+      }
+    }
+
+    // Check currency
+    if (parameters.currency) {
+      const currencyMatch = findClosestMatch(parameters.currency, 'currency');
+      if (currencyMatch && currencyMatch.needsConfirmation) {
+        suggestions.currency = {
+          found: parameters.currency,
+          suggested: currencyMatch.match,
+          confidence: Math.round(currencyMatch.score * 100) + '%'
+        };
+        processedParams.currency = currencyMatch.match;
+      }
     }
 
     return {
-      isComplete: !Object.values(parameters).includes(null),
+      isComplete: !Object.values(processedParams).includes(null),
       needsConfirmation: Object.keys(suggestions).length > 0,
-      params: parameters,
+      params: processedParams,
       suggestions
     };
 
@@ -76,12 +157,10 @@ const extractTransferParameters = async (content, openaiApiKey) => {
       isComplete: false,
       needsConfirmation: false,
       params: {
-        originchain: null,
-        destchain: null,
-        originwallet: null,
-        destwallet: null,
         amount: null,
-        currency: null
+        currency: null,
+        destchain: null,
+        destwallet: null
       },
       suggestions: {}
     };

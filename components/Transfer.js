@@ -11,12 +11,10 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
 
   const validateParams = () => {
     const required = {
-      originchain: 'Origin Chain',
-      destchain: 'Destination Chain',
-      originwallet: 'Origin Wallet',
-      destwallet: 'Destination Wallet',
       amount: 'Amount',
-      currency: 'Currency'
+      currency: 'Currency',
+      destchain: 'Destination Chain',
+      destwallet: 'Destination Wallet'
     };
 
     const missing = [];
@@ -147,16 +145,8 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
             <span>{transferParams.amount} {transferParams.currency}</span>
           </div>
           <div className="detail-group">
-            <label>From Chain:</label>
-            <span>{transferParams.originchain}</span>
-          </div>
-          <div className="detail-group">
             <label>To Chain:</label>
             <span>{transferParams.destchain}</span>
-          </div>
-          <div className="detail-group">
-            <label>From Wallet:</label>
-            <span className="wallet">{transferParams.originwallet}</span>
           </div>
           <div className="detail-group">
             <label>To Wallet:</label>
