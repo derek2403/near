@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "dotenv": "^16.4.7",
+    "lodash": "^4.17.21",
+    "near-api-js": "^5.0.1",
+    "near-seed-phrase": "^0.2.1",
     "next": "14.2.20",
     "openai": "^4.76.0",
     "react": "^18",
