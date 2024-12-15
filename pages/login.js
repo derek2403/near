@@ -12,6 +12,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [loggedInAccount, setLoggedInAccount] = useState(null);
+  const [accountId, setAccountId] = useState('');
   const router = useRouter();
 
   const handleLogin = async (e) => {
@@ -51,31 +52,33 @@ export default function Login() {
 
       const near = await connect(connectionConfig);
       
-      let accountId;
+      let finalAccountId;
       
       if (loginMethod === 'seedPhrase') {
         // For seed phrase, try to extract account ID from the first word
-        accountId = seedPhrase.split(' ')[0] + '.testnet';
+        finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
       } else {
-        // For private key, we'll need to try a different approach
-        accountId = privateKey.substring(0, 10) + '.testnet';
+        if (!accountId.trim()) {
+          throw new Error('Please enter your account ID');
+        }
+        finalAccountId = accountId.trim() + '.testnet';
       }
 
       // Verify the account exists and the key pair matches
       try {
-        const account = await near.account(accountId);
+        const account = await near.account(finalAccountId);
         await account.state(); // This will throw if account doesn't exist
         
         // Store the key in keyStore
-        await connectionConfig.keyStore.setKey("testnet", accountId, keyPair);
+        await connectionConfig.keyStore.setKey("testnet", finalAccountId, keyPair);
 
         // Store account ID in localStorage for future use
-        localStorage.setItem('nearAccountId', accountId);
+        localStorage.setItem('nearAccountId', finalAccountId);
 
         console.log('Login successful');
-        console.log('Account ID:', accountId);
-        setLoggedInAccount(accountId);
-        console.log('LoggedInAccount state set to:', accountId);
+        console.log('Account ID:', finalAccountId);
+        setLoggedInAccount(finalAccountId);
+        console.log('LoggedInAccount state set to:', finalAccountId);
 
       } catch (accountErr) {
         console.error('Account verification error:', accountErr);
@@ -167,8 +170,18 @@ export default function Login() {
                     type="password"
                     value={privateKey}
                     onChange={(e) => setPrivateKey(e.target.value)}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded mb-4"
                     placeholder="Enter your private key"
+                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Enter your account ID
+                  </label>
+                  <input
+                    type="text"
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="example (without .testnet)"
                   />
                 </div>
               )}
