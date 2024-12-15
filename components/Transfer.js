@@ -8,6 +8,22 @@ import * as nearAPI from "near-api-js";
 const { connect, keyStores } = nearAPI;
 const FUNDING_AMOUNT = "0.1"; // Amount to fund the derived address with
 const getDerivationPath = (chainName, index = 1) => `${chainName.toLowerCase()},${index}`;
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const withRetry = async (fn, maxRetries = 3, delayMs = 1000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err.message.includes('exceeded its requests per second capacity')) {
+        console.log(`Rate limited, attempt ${i + 1}/${maxRetries}, waiting ${delayMs}ms...`);
+        await delay(delayMs);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Max retries exceeded');
+};
 
 export default function Transfer({ transferParams, onClose, onRetry }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -37,9 +53,10 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
       console.log('Connected NEAR Account:', accountId);
       console.log('Account Private Key:', accountPrivateKey);
 
+      const keyStore = new keyStores.BrowserLocalStorageKeyStore();
       const connectionConfig = {
         networkId: "testnet",
-        keyStore: new keyStores.BrowserLocalStorageKeyStore(),
+        keyStore: keyStore,
         nodeUrl: "https://rpc.testnet.near.org",
         walletUrl: "https://testnet.mynearwallet.com/",
         helperUrl: "https://helper.testnet.near.org",
@@ -47,6 +64,10 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
       };
 
       try {
+        // Create KeyPair and store it in keyStore
+        const keyPair = nearAPI.KeyPair.fromString(accountPrivateKey);
+        await keyStore.setKey("testnet", accountId, keyPair);
+
         const near = await connect(connectionConfig);
         const account = await near.account(accountId);
         setNearAccount(account);
@@ -189,74 +210,14 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
         fundingAmount: FUNDING_AMOUNT
       });
 
-      setProgressMessage('Funding successful!');
-      return true;
-    } catch (err) {
-      console.error('Funding error:', err);
-      setError(`Initial funding failed: ${err.message}`);
-      setProgressMessage('Funding failed');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setProgressMessage('Funding successful! Proceeding with transfer...');
 
-  // Update the sendFunds function
-  const sendFunds = async (e) => {
-    e.preventDefault();
-    if (!nearAccount || !privateKey) {
-      setError('NEAR account not loaded');
-      return;
-    }
-
-    setIsLoading(true);
-    setProgressValue(10);
-    setError('');
-    setTxHash('');
-
-    try {
-      if (selectedChain.name === "NEAR") {
-        const amountInYocto = nearAPI.utils.format.parseNearAmount(amount);
-        const result = await nearAccount.sendMoney(
-          recipientAddress,
-          amountInYocto
-        );
-        setTxHash(result.transaction.hash);
-      } else {
-        console.log('Starting EVM transfer process...');
+      // Automatically execute the transfer after funding
+      if (transferParams) {
+        // Wait a bit for the funding to be confirmed
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // First, check current balance
-        const adapter = await setupAdapter({
-          accountId: nearAccount.accountId,
-          privateKey: privateKey,
-          mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
-          derivationPath: `${selectedChain.name.toLowerCase()},1`,
-        });
-
-        console.log('Checking balance for address:', adapter.address);
-        const currentBalance = await checkEVMBalance(selectedChain, adapter.address);
-        console.log('Current balance:', currentBalance, selectedChain.symbol);
-
-        // Always try to fund if balance is too low
-        if (parseFloat(currentBalance) < 0.05) {
-          console.log('Balance too low, attempting funding...');
-          const fundingSuccess = await fundDerivedAddress();
-          if (!fundingSuccess) {
-            throw new Error('Failed to fund derived address');
-          }
-          
-          // Wait a bit for funding to be confirmed
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          
-          // Check new balance after funding
-          const newBalance = await checkEVMBalance(selectedChain, adapter.address);
-          console.log('Balance after funding:', newBalance, selectedChain.symbol);
-        }
-
-        setProgressValue(50);
-        console.log('Proceeding with transfer...');
-
-        // Create transaction for the actual transfer
+        // Execute the transfer
         const provider = new ethers.JsonRpcProvider(selectedChain.rpcUrl);
         const tx = {
           nonce: await provider.getTransactionCount(adapter.address),
@@ -266,16 +227,11 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
           chainId: selectedChain.chainId,
         };
 
-        // Get gas price
         const feeData = await provider.getFeeData();
         tx.maxFeePerGas = feeData.maxFeePerGas;
         tx.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
 
-        console.log('Transaction prepared:', tx);
-
-        // Get chain signature for the transfer
         const payload = ethers.getBytes(ethers.Transaction.from(tx).unsignedHash);
-        console.log('Getting signature...');
         
         const signatureResult = await nearAccount.functionCall({
           contractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
@@ -290,14 +246,10 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
           gas: '250000000000000'
         });
 
-        console.log('Got signature, reconstructing...');
-
-        // Reconstruct signature
         const { big_r, s, recovery_id } = signatureResult;
         const r = Buffer.from(big_r.affine_point.substring(2), 'hex');
         const s_value = Buffer.from(s.scalar, 'hex');
         
-        // Create signed transaction
         const signedTx = ethers.Transaction.from({
           ...tx,
           signature: {
@@ -307,15 +259,134 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
           }
         });
 
-        console.log('Sending transaction...');
-        // Send transaction
         const sentTx = await provider.broadcastTransaction(signedTx.serialized);
-        console.log('Transaction sent:', sentTx.hash);
         await sentTx.wait();
-        console.log('Transaction confirmed!');
 
         setTxHash(sentTx.hash);
+        console.log('Transfer successful:', sentTx.hash);
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Operation error:', err);
+      setError(`Operation failed: ${err.message}`);
+      setProgressMessage('Operation failed');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update the sendFunds function
+  const sendFunds = async (e) => {
+    e.preventDefault();
+    if (!nearAccount || !privateKey) {
+      setError('NEAR account not loaded');
+      return;
+    }
+
+    if (!amount || !recipientAddress) {
+      setError('Amount and recipient address are required');
+      return;
+    }
+
+    setIsLoading(true);
+    setProgressValue(10);
+    setError('');
+    setTxHash('');
+
+    try {
+      console.log('Starting transfer with params:', {
+        amount,
+        recipientAddress,
+        chain: selectedChain.name
+      });
+
+      if (selectedChain.name === "NEAR") {
+        const amountInYocto = nearAPI.utils.format.parseNearAmount(amount);
+        const result = await nearAccount.sendMoney(
+          recipientAddress,
+          amountInYocto
+        );
+        setTxHash(result.transaction.hash);
+      } else {
+        console.log('Starting EVM transfer process...');
         
+        // Create KeyPair from privateKey
+        const keyPair = nearAPI.KeyPair.fromString(privateKey);
+        
+        // Create the adapter
+        const adapter = await setupAdapter({
+          accountId: nearAccount.accountId,
+          privateKey: privateKey,
+          mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
+          derivationPath: `${selectedChain.name.toLowerCase()},1`,
+        });
+
+        console.log('Checking balance for address:', adapter.address);
+        const currentBalance = await withRetry(async () => {
+          const provider = new ethers.JsonRpcProvider(selectedChain.rpcUrl);
+          return checkEVMBalance(selectedChain, adapter.address);
+        });
+        console.log('Current balance:', currentBalance, selectedChain.symbol);
+
+        setProgressValue(50);
+        console.log('Proceeding with transfer...');
+
+        // Create transaction for the actual transfer
+        const provider = new ethers.JsonRpcProvider(selectedChain.rpcUrl);
+        
+        // Get nonce with retry
+        const nonce = await withRetry(async () => 
+          provider.getTransactionCount(adapter.address)
+        );
+
+        // Get gas price with retry
+        const feeData = await withRetry(async () => 
+          provider.getFeeData()
+        );
+
+        const tx = {
+          nonce,
+          gasLimit: 21000,
+          to: recipientAddress,
+          value: ethers.parseEther(amount),
+          chainId: selectedChain.chainId,
+          maxFeePerGas: feeData.maxFeePerGas,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas
+        };
+
+        // Get chain signature using adapter directly
+        const unsignedTx = ethers.Transaction.from(tx);
+        console.log('Unsigned transaction:', unsignedTx);
+
+        // Get the transaction hash and convert to hex string
+        const txHash = unsignedTx.unsignedHash;
+        console.log('Transaction hash:', txHash);
+
+        // Remove '0x' prefix if present and convert to Buffer
+        const hashHex = txHash.startsWith('0x') ? txHash.slice(2) : txHash;
+        const hashBuffer = Buffer.from(hashHex, 'hex');
+        console.log('Hash buffer:', hashBuffer);
+
+        // Create payload for signing
+        const payload = Array.from(hashBuffer);
+        console.log('Signing payload:', payload);
+
+        // Sign using adapter's signAndSendTransaction instead
+        const signedTx = await adapter.signAndSendTransaction({
+          to: recipientAddress,
+          value: ethers.parseEther(amount),
+          chainId: selectedChain.chainId,
+          nonce,
+          maxFeePerGas: feeData.maxFeePerGas,
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+          gasLimit: 21000
+        });
+
+        console.log('Transaction sent:', signedTx);
+        setTxHash(signedTx);
+
         // Update balance after transfer
         const finalBalance = await checkEVMBalance(selectedChain, adapter.address);
         setSourceBalance(finalBalance);
@@ -336,7 +407,7 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
   // Update the showEVMAddress function
   useEffect(() => {
     const showEVMAddress = async () => {
-      if (nearAccount && privateKey && selectedChain.name !== "NEAR") {
+      if (nearAccount && privateKey && selectedChain.name !== "NEAR" && amount && recipientAddress) {
         try {
           if (!nearAccount.accountId) {
             console.error('Missing account ID');
@@ -358,19 +429,25 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
           console.log(`Your ${selectedChain.name} address: ${adapter.address}`);
           console.log(`Balance: ${balance} ${selectedChain.symbol}`);
 
-          // Automatically fund if balance is 0
-          if (balance === '0' || balance === '0.0' || parseFloat(balance) === 0) {
+          // Execute transfer if we have a balance
+          if (parseFloat(balance) > 0) {
+            console.log('Balance available, executing transfer...');
+            await sendFunds(new Event('submit'));
+          }
+          // If no balance, fund first
+          else {
             console.log('Zero balance detected, initiating funding...');
             await fundDerivedAddress();
           }
         } catch (err) {
-          console.error('Error showing EVM address:', err);
+          console.error('Error in automatic process:', err);
+          setError(err.message);
         }
       }
     };
 
     showEVMAddress();
-  }, [selectedChain, nearAccount, privateKey]);
+  }, [selectedChain, nearAccount, privateKey, amount, recipientAddress]);
 
   // Add this useEffect to debug the button visibility conditions
   useEffect(() => {
