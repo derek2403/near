@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "dotenv": "^16.4.7",
     "lodash": "^4.17.21",
     "near-api-js": "^5.0.1",
