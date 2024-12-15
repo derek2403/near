@@ -104,88 +104,117 @@ export default function CreateWallet() {
   };
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
-        <h1 className="text-2xl font-bold mb-6">Generate NEAR Wallet</h1>
-        
+    <div className="min-h-screen p-8 bg-gray-50">
+      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-8">
+        <h1 className="text-2xl font-bold mb-4">Create New Account</h1>
+        <p className="text-gray-600 mb-8">
+          Enter an Account ID to use with your NEAR account. Your Account ID will be used for all NEAR operations, including sending and receiving assets.
+        </p>
+
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
             <p>{error}</p>
           </div>
         )}
 
         {!walletInfo && (
-          <div className="space-y-4">
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={accountId}
-                onChange={(e) => {
-                  setAccountId(e.target.value.toLowerCase());
-                  setIsAvailable(null);
-                }}
-                placeholder="Enter desired account name"
-                className="flex-1 p-2 border rounded"
-              />
-              <span className="p-2 bg-gray-100 rounded">.testnet</span>
+          <div>
+            <div className="mb-6">
+              <label className="block text-gray-700 mb-2">Account ID</label>
+              <div className="flex items-center border rounded-lg overflow-hidden hover:border-gray-400 transition-colors duration-200">
+                <input
+                  type="text"
+                  value={accountId}
+                  onChange={(e) => {
+                    setAccountId(e.target.value.toLowerCase());
+                    setIsAvailable(null);
+                  }}
+                  placeholder="yourname"
+                  className="flex-1 p-3 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="px-3 py-3 bg-gray-100 text-gray-500">.testnet</span>
+              </div>
             </div>
 
-            <button
-              onClick={checkAccountAvailability}
-              disabled={isChecking || !accountId}
-              className={`w-full bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition-colors ${
-                isChecking || !accountId ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {isChecking ? 'Checking...' : 'Check Availability'}
-            </button>
+            <div className="mb-6 text-sm text-gray-600">
+              <p className="mb-2">Your account ID can contain any of the following:</p>
+              <ul className="list-disc pl-5 mb-4 space-y-1">
+                <li>Lowercase characters (a-z)</li>
+                <li>Digits (0-9)</li>
+                <li>Characters (_-) can be used as separators</li>
+              </ul>
+              <p className="mb-2">Your account ID CANNOT contain:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Characters "@" or "."</li>
+                <li>Fewer than 2 characters</li>
+                <li>More than 64 characters (including .testnet)</li>
+              </ul>
+            </div>
 
             {isAvailable !== null && (
-              <div className={`p-3 rounded ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {isAvailable ? 'Account name is available!' : 'Account name is already taken'}
+              <div className={`p-3 rounded-lg mb-6 ${
+                isAvailable 
+                  ? 'bg-green-50 text-green-600 border border-green-200' 
+                  : 'bg-red-50 text-red-600 border border-red-200'
+              }`}>
+                {isAvailable 
+                  ? `Congrats! ${accountId}.testnet is available.` 
+                  : 'Account ID is taken. Try something else.'}
               </div>
             )}
 
-            <button
-              onClick={generateWallet}
-              disabled={loading || !isAvailable || !accountId}
-              className={`w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors ${
-                loading || !isAvailable || !accountId ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {loading ? 'Generating Wallet...' : 'Generate New Wallet'}
-            </button>
+            <div className="space-y-4">
+              <button
+                onClick={checkAccountAvailability}
+                disabled={isChecking || !accountId}
+                className={`w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5 ${
+                  isChecking || !accountId ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {isChecking ? 'Checking...' : 'Check Availability'}
+              </button>
+
+              <button
+                onClick={generateWallet}
+                disabled={loading || !isAvailable || !accountId}
+                className={`w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-all duration-200 transform hover:-translate-y-0.5 ${
+                  loading || !isAvailable || !accountId ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {loading ? 'Generating Wallet...' : 'Generate New Wallet'}
+              </button>
+            </div>
           </div>
         )}
 
         {walletInfo && (
-          <div className="space-y-4">
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+          <div className="space-y-6">
+            <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg">
               Wallet Generated Successfully!
             </div>
             
-            <div className="bg-yellow-50 p-4 rounded border border-yellow-200">
-              <h2 className="font-semibold text-yellow-800 mb-2">
+            <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+              <h2 className="font-semibold text-yellow-800 mb-4">
                 Important: Save This Information
               </h2>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Account ID:</label>
-                  <p className="mt-1 text-sm bg-white p-2 rounded border">{walletInfo.accountId}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Account ID:</label>
+                  <p className="text-sm bg-white p-3 rounded-lg border">{walletInfo.accountId}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Seed Phrase:</label>
-                  <p className="mt-1 text-sm bg-white p-2 rounded border break-all">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Seed Phrase:</label>
+                  <p className="text-sm bg-white p-3 rounded-lg border break-all">
                     {walletInfo.seedPhrase}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Public Key:</label>
-                  <p className="mt-1 text-sm bg-white p-2 rounded border break-all">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Public Key:</label>
+                  <p className="text-sm bg-white p-3 rounded-lg border break-all">
                     {walletInfo.publicKey}
                   </p>
                 </div>
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-red-600 text-sm font-medium">
                     ⚠️ Warning: Store this information securely. You'll need it to access your wallet!
                   </p>
@@ -198,7 +227,7 @@ export default function CreateWallet() {
                 setWalletInfo(null);
                 setError(null);
               }}
-              className="w-full bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition-colors"
+              className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5"
             >
               Generate Another Wallet
             </button>
