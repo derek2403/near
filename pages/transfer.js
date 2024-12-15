@@ -41,20 +41,17 @@ export default function TransferPage() {
   };
 
   const handleManualTransfer = () => {
-    const params = {
-      amount: parseFloat(amount),
-      currency: currency,
-      destchain: destChain,
-      destwallet: destWallet,
-    };
-
-    // Validate all fields are filled
     if (!amount || !currency || !destChain || !destWallet) {
       alert('Please fill in all fields');
       return;
     }
 
-    setTransferParams(params);
+    setTransferParams({
+      amount: parseFloat(amount),
+      currency: currency,
+      destchain: destChain,
+      destwallet: destWallet
+    });
     setShowTransfer(true);
   };
 
@@ -81,63 +78,67 @@ export default function TransferPage() {
         </button>
       </div>
 
-      {isAIMode ? (
-        <div className="transfer-form">
-          <h2>AI-Powered Transfer</h2>
-          <p>Describe your transfer in natural language:</p>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Example: Transfer 1.5 ETH to 0x742d... on Polygon"
-            rows={4}
-          />
-          <button onClick={handleAITransfer}>Process Transfer</button>
-        </div>
-      ) : (
-        <div className="transfer-form">
-          <h2>Manual Transfer</h2>
-          <div className="form-group">
-            <label>Amount:</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Enter amount"
-            />
-          </div>
-          
-          <div className="form-group">
-            <label>Currency:</label>
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-              <option value="">Select currency</option>
-              {[...new Set(supportedChains.chains.map(chain => chain.symbol))].map(symbol => (
-                <option key={symbol} value={symbol}>{symbol}</option>
-              ))}
-            </select>
-          </div>
+      {!showTransfer && (
+        <>
+          {isAIMode ? (
+            <div className="transfer-form">
+              <h2>AI-Powered Transfer</h2>
+              <p>Describe your transfer in natural language:</p>
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Example: Transfer 1.5 ETH to 0x742d... on Polygon"
+                rows={4}
+              />
+              <button onClick={handleAITransfer}>Process Transfer</button>
+            </div>
+          ) : (
+            <div className="transfer-form">
+              <h2>Manual Transfer</h2>
+              <div className="form-group">
+                <label>Amount:</label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Enter amount"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Currency:</label>
+                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                  <option value="">Select currency</option>
+                  {[...new Set(supportedChains.chains.map(chain => chain.symbol))].map(symbol => (
+                    <option key={symbol} value={symbol}>{symbol}</option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="form-group">
-            <label>Destination Chain:</label>
-            <select value={destChain} onChange={(e) => setDestChain(e.target.value)}>
-              <option value="">Select chain</option>
-              {supportedChains.chains.map(chain => (
-                <option key={chain.name} value={chain.name}>{chain.name}</option>
-              ))}
-            </select>
-          </div>
+              <div className="form-group">
+                <label>Destination Chain:</label>
+                <select value={destChain} onChange={(e) => setDestChain(e.target.value)}>
+                  <option value="">Select chain</option>
+                  {supportedChains.chains.map(chain => (
+                    <option key={chain.name} value={chain.name}>{chain.name}</option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="form-group">
-            <label>Destination Wallet:</label>
-            <input
-              type="text"
-              value={destWallet}
-              onChange={(e) => setDestWallet(e.target.value)}
-              placeholder="Enter destination wallet address"
-            />
-          </div>
+              <div className="form-group">
+                <label>Destination Wallet:</label>
+                <input
+                  type="text"
+                  value={destWallet}
+                  onChange={(e) => setDestWallet(e.target.value)}
+                  placeholder="Enter destination wallet address"
+                />
+              </div>
 
-          <button onClick={handleManualTransfer}>Process Transfer</button>
-        </div>
+              <button onClick={handleManualTransfer}>Process Transfer</button>
+            </div>
+          )}
+        </>
       )}
 
       {showTransfer && (
