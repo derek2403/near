@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { setupAdapter } from 'near-ca';
 import { ethers } from 'ethers';
-import { Input, Progress, CircularProgress } from "@nextui-org/react";
+import { Input, Progress, CircularProgress, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, useDisclosure } from "@nextui-org/react";
 import supportedChains from '../data/supportedChain.json';
 import * as nearAPI from "near-api-js";
 
@@ -25,6 +25,51 @@ const withRetry = async (fn, maxRetries = 3, delayMs = 1000) => {
   throw new Error('Max retries exceeded');
 };
 
+// Add this helper function at the top
+const setupKeyPair = async (accountId, privateKey) => {
+  const keyStore = new keyStores.BrowserLocalStorageKeyStore();
+  const keyPair = nearAPI.KeyPair.fromString(privateKey);
+  await keyStore.setKey("testnet", accountId, keyPair);
+  return keyStore;
+};
+
+// Add this helper function
+const ensureKeyPair = async (account, privateKey) => {
+  const keyPair = nearAPI.KeyPair.fromString(privateKey);
+  await account.connection.signer.keyStore.setKey(
+    "testnet",
+    account.accountId,
+    keyPair
+  );
+  return keyPair;
+};
+
+// Add this helper at the top
+const createProviderWithRetry = (rpcUrl) => {
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  
+  // Wrap provider methods with retry logic
+  const originalSend = provider.send.bind(provider);
+  provider.send = async (...args) => {
+    let lastError;
+    for (let i = 0; i < 3; i++) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, i * 1000)); // Increasing delay
+        return await originalSend(...args);
+      } catch (err) {
+        lastError = err;
+        if (!err.message.includes('exceeded its requests per second capacity')) {
+          throw err;
+        }
+        console.log(`Rate limited, retrying in ${(i + 1) * 1000}ms...`);
+      }
+    }
+    throw lastError;
+  };
+  
+  return provider;
+};
+
 export default function Transfer({ transferParams, onClose, onRetry }) {
   const [isLoading, setIsLoading] = useState(false);
   const [progressValue, setProgressValue] = useState(0);
@@ -38,9 +83,11 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
   const [privateKey, setPrivateKey] = useState(null);
   const [derivedAddress, setDerivedAddress] = useState('');
   const [progressMessage, setProgressMessage] = useState('');
+  const { isOpen, onOpen, onClose: onCloseModal } = useDisclosure();
+  const [pendingTx, setPendingTx] = useState(null);
 
   useEffect(() => {
-    // Load the logged-in NEAR account and private key
+    // Update the loadNearAccount function
     const loadNearAccount = async () => {
       const accountId = localStorage.getItem('nearAccountId');
       const accountPrivateKey = localStorage.getItem('nearPrivateKey');
@@ -53,30 +100,47 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
       console.log('Connected NEAR Account:', accountId);
       console.log('Account Private Key:', accountPrivateKey);
 
-      const keyStore = new keyStores.BrowserLocalStorageKeyStore();
-      const connectionConfig = {
-        networkId: "testnet",
-        keyStore: keyStore,
-        nodeUrl: "https://rpc.testnet.near.org",
-        walletUrl: "https://testnet.mynearwallet.com/",
-        helperUrl: "https://helper.testnet.near.org",
-        explorerUrl: "https://testnet.nearblocks.io"
-      };
-
       try {
-        // Create KeyPair and store it in keyStore
+        // Create keyStore and keyPair
+        const keyStore = new keyStores.BrowserLocalStorageKeyStore();
         const keyPair = nearAPI.KeyPair.fromString(accountPrivateKey);
+        
+        // Store the key in keyStore
         await keyStore.setKey("testnet", accountId, keyPair);
+
+        const connectionConfig = {
+          networkId: "testnet",
+          keyStore: keyStore, // Use the keyStore with the stored key
+          nodeUrl: "https://rpc.testnet.near.org",
+          walletUrl: "https://testnet.mynearwallet.com/",
+          helperUrl: "https://helper.testnet.near.org",
+          explorerUrl: "https://testnet.nearblocks.io"
+        };
 
         const near = await connect(connectionConfig);
         const account = await near.account(accountId);
+
+        // Store the keyPair in the account's signer
+        await account.connection.signer.keyStore.setKey(
+          "testnet",
+          accountId,
+          keyPair
+        );
+
+        // Verify the key is stored
+        const storedKey = await account.connection.signer.keyStore.getKey(
+          "testnet",
+          accountId
+        );
+        console.log('Key verification:', !!storedKey);
+
         setNearAccount(account);
         setPrivateKey(accountPrivateKey);
         
-        // Log additional account details
         const balance = await account.getAccountBalance();
         console.log('Account Balance:', nearAPI.utils.format.formatNearAmount(balance.available), 'NEAR');
       } catch (err) {
+        console.error('Failed to load NEAR account:', err);
         setError('Failed to load NEAR account: ' + err.message);
       }
     };
@@ -277,16 +341,53 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
     }
   };
 
+  // Add this confirmation dialog component
+  const TransactionConfirmDialog = ({ isOpen, onClose, tx, onConfirm }) => {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalContent>
+          <ModalHeader>Confirm Transaction</ModalHeader>
+          <ModalBody>
+            <div className="space-y-2">
+              <p>Please confirm the transaction details:</p>
+              <div className="bg-gray-100 p-3 rounded">
+                <p><strong>To:</strong> {tx?.to}</p>
+                <p><strong>Amount:</strong> {tx?.amount} {tx?.symbol}</p>
+                <p><strong>Network:</strong> {tx?.network}</p>
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="danger" variant="light" onPress={onClose}>
+              Cancel
+            </Button>
+            <Button color="primary" onPress={onConfirm}>
+              Confirm & Sign
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    );
+  };
+
   // Update the sendFunds function
   const sendFunds = async (e) => {
     e.preventDefault();
+    
+    // Show confirmation dialog first
+    setPendingTx({
+      to: recipientAddress,
+      amount: amount,
+      symbol: selectedChain.symbol,
+      network: selectedChain.name
+    });
+    onOpen();
+  };
+
+  // Update the executeTransaction function
+  const executeTransaction = async () => {
     if (!nearAccount || !privateKey) {
       setError('NEAR account not loaded');
-      return;
-    }
-
-    if (!amount || !recipientAddress) {
-      setError('Amount and recipient address are required');
       return;
     }
 
@@ -296,109 +397,80 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
     setTxHash('');
 
     try {
-      console.log('Starting transfer with params:', {
-        amount,
-        recipientAddress,
-        chain: selectedChain.name
+      // Create the adapter
+      const adapter = await setupAdapter({
+        accountId: nearAccount.accountId,
+        privateKey: privateKey,
+        mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
+        derivationPath: `${selectedChain.name.toLowerCase()},1`,
       });
 
-      if (selectedChain.name === "NEAR") {
-        const amountInYocto = nearAPI.utils.format.parseNearAmount(amount);
-        const result = await nearAccount.sendMoney(
-          recipientAddress,
-          amountInYocto
-        );
-        setTxHash(result.transaction.hash);
-      } else {
-        console.log('Starting EVM transfer process...');
-        
-        // Create KeyPair from privateKey
-        const keyPair = nearAPI.KeyPair.fromString(privateKey);
-        
-        // Create the adapter
-        const adapter = await setupAdapter({
-          accountId: nearAccount.accountId,
-          privateKey: privateKey,
-          mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
-          derivationPath: `${selectedChain.name.toLowerCase()},1`,
-        });
+      console.log('Executing transaction with adapter:', adapter.address);
 
-        console.log('Checking balance for address:', adapter.address);
-        const currentBalance = await withRetry(async () => {
-          const provider = new ethers.JsonRpcProvider(selectedChain.rpcUrl);
-          return checkEVMBalance(selectedChain, adapter.address);
-        });
-        console.log('Current balance:', currentBalance, selectedChain.symbol);
+      // Create provider
+      const provider = new ethers.JsonRpcProvider(selectedChain.rpcUrl);
+      console.log('Created provider');
 
-        setProgressValue(50);
-        console.log('Proceeding with transfer...');
+      // Get nonce
+      const nonce = await provider.getTransactionCount(adapter.address);
+      console.log('Got nonce:', nonce);
 
-        // Create transaction for the actual transfer
-        const provider = new ethers.JsonRpcProvider(selectedChain.rpcUrl);
-        
-        // Get nonce with retry
-        const nonce = await withRetry(async () => 
-          provider.getTransactionCount(adapter.address)
-        );
+      // Create transaction
+      const tx = {
+        nonce: nonce,
+        gasLimit: 21000,
+        to: recipientAddress,
+        value: ethers.parseEther(amount),
+        chainId: selectedChain.chainId,
+        maxFeePerGas: ethers.parseUnits("0.1", "gwei"),
+        maxPriorityFeePerGas: ethers.parseUnits("0.1", "gwei")
+      };
 
-        // Get gas price with retry
-        const feeData = await withRetry(async () => 
-          provider.getFeeData()
-        );
+      console.log('Transaction prepared:', tx);
 
-        const tx = {
-          nonce,
-          gasLimit: 21000,
-          to: recipientAddress,
-          value: ethers.parseEther(amount),
-          chainId: selectedChain.chainId,
-          maxFeePerGas: feeData.maxFeePerGas,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas
-        };
+      // Get transaction hash and create payload
+      const unsignedTx = ethers.Transaction.from(tx);
+      const messageHash = unsignedTx.unsignedHash;
 
-        // Get chain signature using adapter directly
-        const unsignedTx = ethers.Transaction.from(tx);
-        console.log('Unsigned transaction:', unsignedTx);
-
-        // Get the transaction hash and convert to hex string
-        const txHash = unsignedTx.unsignedHash;
-        console.log('Transaction hash:', txHash);
-
-        // Remove '0x' prefix if present and convert to Buffer
-        const hashHex = txHash.startsWith('0x') ? txHash.slice(2) : txHash;
-        const hashBuffer = Buffer.from(hashHex, 'hex');
-        console.log('Hash buffer:', hashBuffer);
-
-        // Create payload for signing
-        const payload = Array.from(hashBuffer);
-        console.log('Signing payload:', payload);
-
-        // Sign using adapter's signAndSendTransaction instead
-        const signedTx = await adapter.signAndSendTransaction({
-          to: recipientAddress,
-          value: ethers.parseEther(amount),
-          chainId: selectedChain.chainId,
-          nonce,
-          maxFeePerGas: feeData.maxFeePerGas,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-          gasLimit: 21000
-        });
-
-        console.log('Transaction sent:', signedTx);
-        setTxHash(signedTx);
-
-        // Update balance after transfer
-        const finalBalance = await checkEVMBalance(selectedChain, adapter.address);
-        setSourceBalance(finalBalance);
-        console.log('Final balance:', finalBalance, selectedChain.symbol);
+      // Create a fixed-size payload
+      const hashBytes = ethers.getBytes(messageHash);
+      const payload = new Uint8Array(32);
+      for (let i = 0; i < hashBytes.length; i++) {
+        payload[i] = hashBytes[i];
       }
 
-      setProgressValue(100);
+      console.log('Transaction details:', {
+        tx,
+        messageHash,
+        hashBytes,
+        payload: Array.from(payload)
+      });
+
+      // Sign using adapter's sign method
+      console.log('Getting signature from adapter...');
+      const signature = await adapter.signAndSendTransaction({
+        to: recipientAddress,
+        value: ethers.parseEther(amount),
+        chainId: selectedChain.chainId,
+        nonce: nonce,
+        maxFeePerGas: ethers.parseUnits("0.1", "gwei"),
+        maxPriorityFeePerGas: ethers.parseUnits("0.1", "gwei"),
+        gasLimit: 21000
+      });
+
+      console.log('Got signature:', signature);
+      setTxHash(signature);
+
+      // Wait for confirmation
+      const receipt = await provider.waitForTransaction(signature);
+      console.log('Transaction confirmed:', receipt);
+
+      onCloseModal();
       if (onClose) onClose();
+
     } catch (err) {
       console.error('Transfer error:', err);
       setError(`Transfer failed: ${err.message}`);
-      setProgressValue(0);
     } finally {
       setIsLoading(false);
     }
@@ -432,7 +504,8 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
           // Execute transfer if we have a balance
           if (parseFloat(balance) > 0) {
             console.log('Balance available, executing transfer...');
-            await sendFunds(new Event('submit'));
+            // Execute transaction directly instead of showing dialog
+            await executeTransaction();
           }
           // If no balance, fund first
           else {
@@ -607,6 +680,13 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
       {sourceBalance && (
         <p className="mt-6">Source Wallet Balance: {sourceBalance} {selectedChain.symbol}</p>
       )}
+
+      <TransactionConfirmDialog 
+        isOpen={isOpen} 
+        onClose={onCloseModal}
+        tx={pendingTx}
+        onConfirm={executeTransaction}
+      />
     </div>
   );
 } 
