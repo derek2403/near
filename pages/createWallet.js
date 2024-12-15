@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as nearAPI from "near-api-js";
 import { generateSeedPhrase } from "near-seed-phrase";
+import { EyeIcon, EyeSlashIcon, ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
@@ -11,6 +12,27 @@ export default function CreateWallet() {
   const [accountId, setAccountId] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState(null);
+  const [showSeedPhrase, setShowSeedPhrase] = useState(false);
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [copiedStates, setCopiedStates] = useState({
+    seedPhrase: false,
+    privateKey: false,
+    publicKey: false,
+    accountId: false
+  });
+
+  useEffect(() => {
+    if (!accountId) {
+      setIsAvailable(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      checkAccountAvailability();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [accountId]);
 
   const checkAccountAvailability = async () => {
     try {
@@ -19,7 +41,7 @@ export default function CreateWallet() {
 
       const fullAccountId = `${accountId}.testnet`;
       console.log(`Checking availability for account: ${fullAccountId}`);
-      
+
       // Use NEAR RPC endpoint to check account
       const response = await fetch('https://rpc.testnet.near.org', {
         method: 'POST',
@@ -40,7 +62,7 @@ export default function CreateWallet() {
 
       const data = await response.json();
       console.log('RPC response:', data);
-      
+
       // If we get an error about account not existing, then it's available
       if (data.error && data.error.cause && data.error.cause.name === 'UNKNOWN_ACCOUNT') {
         console.log(`Account ${fullAccountId} does not exist - IS available`);
@@ -65,7 +87,7 @@ export default function CreateWallet() {
 
       // Generate a new key pair and seed phrase
       const { seedPhrase, secretKey, publicKey } = generateSeedPhrase();
-      
+
       const fullAccountId = `${accountId}.testnet`;
 
       // Initialize connection to NEAR testnet
@@ -79,7 +101,7 @@ export default function CreateWallet() {
       };
 
       const near = await connect(connectionConfig);
-      
+
       // Set up the key pair
       const keyPair = KeyPair.fromString(secretKey);
       const keyStore = new keyStores.InMemoryKeyStore();
@@ -100,6 +122,18 @@ export default function CreateWallet() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCopy = async (text, field) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedStates(prev => ({ ...prev, [field]: true }));
+      setTimeout(() => {
+        setCopiedStates(prev => ({ ...prev, [field]: false }));
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -136,50 +170,29 @@ export default function CreateWallet() {
               </div>
             </div>
 
-            <div className="mb-6 text-sm text-gray-600">
-              <p className="mb-2">Your account ID can contain any of the following:</p>
-              <ul className="list-disc pl-5 mb-4 space-y-1">
-                <li>Lowercase characters (a-z)</li>
-                <li>Digits (0-9)</li>
-                <li>Characters (_-) can be used as separators</li>
-              </ul>
-              <p className="mb-2">Your account ID CANNOT contain:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Characters "@" or "."</li>
-                <li>Fewer than 2 characters</li>
-                <li>More than 64 characters (including .testnet)</li>
-              </ul>
-            </div>
+            {isChecking && (
+              <div className="text-gray-600 mb-4">
+                Checking availability...
+              </div>
+            )}
 
             {isAvailable !== null && (
-              <div className={`p-3 rounded-lg mb-6 ${
-                isAvailable 
-                  ? 'bg-green-50 text-green-600 border border-green-200' 
+              <div className={`p-3 rounded-lg mb-6 ${isAvailable
+                  ? 'bg-green-50 text-green-600 border border-green-200'
                   : 'bg-red-50 text-red-600 border border-red-200'
-              }`}>
-                {isAvailable 
-                  ? `Congrats! ${accountId}.testnet is available.` 
+                }`}>
+                {isAvailable
+                  ? `Congrats! ${accountId}.testnet is available.`
                   : 'Account ID is taken. Try something else.'}
               </div>
             )}
 
             <div className="space-y-4">
               <button
-                onClick={checkAccountAvailability}
-                disabled={isChecking || !accountId}
-                className={`w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5 ${
-                  isChecking || !accountId ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {isChecking ? 'Checking...' : 'Check Availability'}
-              </button>
-
-              <button
                 onClick={generateWallet}
                 disabled={loading || !isAvailable || !accountId}
-                className={`w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-all duration-200 transform hover:-translate-y-0.5 ${
-                  loading || !isAvailable || !accountId ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className={`w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-all duration-200 transform hover:-translate-y-0.5 ${loading || !isAvailable || !accountId ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
               >
                 {loading ? 'Generating Wallet...' : 'Generate New Wallet'}
               </button>
@@ -200,23 +213,99 @@ export default function CreateWallet() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Account ID:</label>
-                  <p className="text-sm bg-white p-3 rounded-lg border">{walletInfo.accountId}</p>
+                  <div className="flex items-center bg-white p-3 rounded-lg border">
+                    <p className="text-sm flex-1">{walletInfo.accountId}</p>
+                    <button
+                      onClick={() => handleCopy(walletInfo.accountId, 'accountId')}
+                      className="ml-2 text-gray-500 hover:text-gray-700"
+                    >
+                      {copiedStates.accountId ? (
+                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <ClipboardIcon className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Seed Phrase:</label>
-                  <p className="text-sm bg-white p-3 rounded-lg border break-all">
-                    {walletInfo.seedPhrase}
-                  </p>
+                  <div className="flex items-center bg-white p-3 rounded-lg border">
+                    <p className={`text-sm flex-1 break-all ${!showSeedPhrase ? 'blur-sm' : ''}`}>
+                      {walletInfo.seedPhrase}
+                    </p>
+                    <button
+                      onClick={() => handleCopy(walletInfo.seedPhrase, 'seedPhrase')}
+                      className="ml-2 text-gray-500 hover:text-gray-700"
+                    >
+                      {copiedStates.seedPhrase ? (
+                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <ClipboardIcon className="h-5 w-5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowSeedPhrase(!showSeedPhrase)}
+                      className="ml-2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showSeedPhrase ? (
+                        <EyeSlashIcon className="h-5 w-5" />
+                      ) : (
+                        <EyeIcon className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Private Key:</label>
+                  <div className="flex items-center bg-white p-3 rounded-lg border">
+                    <p className={`text-sm flex-1 break-all ${!showPrivateKey ? 'blur-sm' : ''}`}>
+                      {walletInfo.secretKey}
+                    </p>
+                    <button
+                      onClick={() => handleCopy(walletInfo.secretKey, 'privateKey')}
+                      className="ml-2 text-gray-500 hover:text-gray-700"
+                    >
+                      {copiedStates.privateKey ? (
+                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <ClipboardIcon className="h-5 w-5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowPrivateKey(!showPrivateKey)}
+                      className="ml-2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPrivateKey ? (
+                        <EyeSlashIcon className="h-5 w-5" />
+                      ) : (
+                        <EyeIcon className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Public Key:</label>
-                  <p className="text-sm bg-white p-3 rounded-lg border break-all">
-                    {walletInfo.publicKey}
-                  </p>
+                  <div className="flex items-center bg-white p-3 rounded-lg border">
+                    <p className="text-sm flex-1 break-all">{walletInfo.publicKey}</p>
+                    <button
+                      onClick={() => handleCopy(walletInfo.publicKey, 'publicKey')}
+                      className="ml-2 text-gray-500 hover:text-gray-700"
+                    >
+                      {copiedStates.publicKey ? (
+                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <ClipboardIcon className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
+
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-red-600 text-sm font-medium">
-                    ⚠️ Warning: Store this information securely. You'll need it to access your wallet!
+                    ⚠️ Warning: Store this information securely. Never share your private key or seed phrase with anyone!
                   </p>
                 </div>
               </div>
@@ -226,6 +315,14 @@ export default function CreateWallet() {
               onClick={() => {
                 setWalletInfo(null);
                 setError(null);
+                setShowSeedPhrase(false);
+                setShowPrivateKey(false);
+                setCopiedStates({
+                  seedPhrase: false,
+                  privateKey: false,
+                  publicKey: false,
+                  accountId: false
+                });
               }}
               className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5"
             >
