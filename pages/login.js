@@ -72,14 +72,17 @@ export default function Login() {
         // Store the key in keyStore
         await connectionConfig.keyStore.setKey("testnet", finalAccountId, keyPair);
 
-        // Store account ID in localStorage for future use
+        // Store account ID and private key in localStorage
         localStorage.setItem('nearAccountId', finalAccountId);
+        localStorage.setItem('nearPrivateKey', keyPair.toString());
 
         console.log('Login successful');
         console.log('Account ID:', finalAccountId);
         setLoggedInAccount(finalAccountId);
         console.log('LoggedInAccount state set to:', finalAccountId);
 
+        // Redirect to transfer page
+        router.push('/transfer');
       } catch (accountErr) {
         console.error('Account verification error:', accountErr);
         throw new Error('Unable to verify account. Please check your credentials.');
