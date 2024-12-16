@@ -135,7 +135,10 @@ const getPublicKey = async (accountId) => {
   return data.result.keys[0].public_key;
 };
 
-// Update the callContract helper function
+// Update the SCHEMA constant
+const SCHEMA = nearAPI.transactions.SCHEMA;
+
+// Update the callContract function
 const callContract = async (account, method, args) => {
   try {
     // For view methods, use view call
@@ -152,64 +155,32 @@ const callContract = async (account, method, args) => {
     const accessKeys = await account.getAccessKeys();
     console.log('Available access keys:', accessKeys);
 
-    // Use the existing key pair from the first access key
-    const existingPublicKey = accessKeys[0].public_key;
-    console.log('Using existing public key:', existingPublicKey);
-
-    // Create key pair from the stored private key
-    const keyPair = nearAPI.KeyPair.fromString(account.privateKey);
+    // Create key pair from the full private key
+    const keyPair = nearAPI.KeyPair.fromString(
+      'ed25519:tnK82FhpXJLK5x3ESePfHqYQ9Jxm5LH7xfrCVqkMFTxPokqc62z1ow8CC2XpFg2hpATS8SVdUbLiSA5J9ELW8eu'
+    );
     console.log('Created key pair with public key:', keyPair.getPublicKey().toString());
 
-    // Get the latest block hash
-    const blockResult = await account.connection.provider.block({ finality: 'final' });
-    if (!blockResult || !blockResult.header || !blockResult.header.hash) {
-      throw new Error('Failed to get block hash');
-    }
-    const recentBlockHash = nearAPI.utils.serialize.base_decode(blockResult.header.hash);
-
-    // Create the actions array
-    const actions = [
-      nearAPI.transactions.functionCall(
-        method,
-        args,
-        '300000000000000', // gas
-        '0' // deposit
-      )
-    ];
-
-    // Get current nonce and convert to BigInt
-    const currentNonce = BigInt(accessKeys[0].access_key.nonce);
-    const nextNonce = currentNonce + BigInt(1);
-
-    // Create transaction using the existing public key
-    const transaction = nearAPI.transactions.createTransaction(
+    // Set the key pair in the account's key store
+    await account.connection.signer.keyStore.setKey(
+      account.connection.networkId,
       account.accountId,
-      nearAPI.utils.PublicKey.fromString(existingPublicKey),
-      process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
-      Number(nextNonce), // Convert back to number for the transaction
-      actions,
-      recentBlockHash
+      keyPair
     );
 
-    // Sign the transaction with the key pair
-    const serializedTx = nearAPI.utils.serialize.serialize(
-      nearAPI.transactions.SCHEMA,
-      transaction
-    );
-    const serializedTxHash = new Uint8Array(await crypto.subtle.digest('SHA-256', serializedTx));
-    const signature = keyPair.sign(serializedTxHash);
-
-    const signedTransaction = new nearAPI.transactions.SignedTransaction({
-      transaction,
-      signature: new nearAPI.transactions.Signature({
-        keyType: transaction.publicKey.keyType,
-        data: signature.signature
-      })
+    // Use the account's signAndSendTransaction method with deposit
+    const result = await account.signAndSendTransaction({
+      receiverId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
+      actions: [
+        nearAPI.transactions.functionCall(
+          method,
+          args,
+          '300000000000000', // gas
+          method === 'sign' ? '1' : '0' // attach 1 yoctoNEAR deposit for sign method
+        )
+      ]
     });
 
-    // Send the signed transaction
-    const result = await account.connection.provider.sendTransaction(signedTransaction);
-    
     if (result.status && result.status.SuccessValue) {
       const value = Buffer.from(result.status.SuccessValue, 'base64').toString();
       return JSON.parse(value);
