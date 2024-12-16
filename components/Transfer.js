@@ -28,23 +28,43 @@ const withRetry = async (fn, maxRetries = 3, delayMs = 1000) => {
 // Update the setupKeyPair helper function
 const setupKeyPair = async (accountId, privateKey) => {
   try {
-    const keyStore = new keyStores.InMemoryKeyStore(); // Change to InMemoryKeyStore
+    // Create a new keyStore for this specific transaction
+    const keyStore = new keyStores.InMemoryKeyStore();
     const keyPair = nearAPI.KeyPair.fromString(privateKey);
+    
+    // Clear any existing keys and set the new one
+    await keyStore.clear();
     await keyStore.setKey("testnet", accountId, keyPair);
     
-    // Create new connection with this keyStore
+    // Create a new connection config
     const connectionConfig = {
       networkId: "testnet",
       keyStore,
       nodeUrl: "https://rpc.testnet.near.org",
       walletUrl: "https://testnet.mynearwallet.com/",
       helperUrl: "https://helper.testnet.near.org",
-      explorerUrl: "https://testnet.nearblocks.io"
+      explorerUrl: "https://testnet.nearblocks.io",
+      headers: {}
     };
 
+    // Create new connection
     const near = await connect(connectionConfig);
+    
+    // Create account with the connection
     const account = await near.account(accountId);
-    return { account, keyStore };
+    
+    // Verify account exists and has the key
+    const state = await account.state();
+    console.log('Account state verified:', state);
+
+    // Verify access keys
+    const accessKeys = await account.getAccessKeys();
+    console.log('Access keys:', accessKeys);
+
+    // Store the private key for later use
+    account.privateKey = privateKey;
+
+    return { account, keyStore, keyPair, near };
   } catch (err) {
     console.error('Error setting up key pair:', err);
     throw err;
@@ -113,6 +133,93 @@ const getPublicKey = async (accountId) => {
   }
 
   return data.result.keys[0].public_key;
+};
+
+// Update the callContract helper function
+const callContract = async (account, method, args) => {
+  try {
+    // For view methods, use view call
+    if (method === 'public_key') {
+      const result = await account.viewFunction({
+        contractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
+        methodName: method,
+        args: args || {}
+      });
+      return result;
+    }
+
+    // Get all access keys and find the full access key
+    const accessKeys = await account.getAccessKeys();
+    console.log('Available access keys:', accessKeys);
+
+    // Use the existing key pair from the first access key
+    const existingPublicKey = accessKeys[0].public_key;
+    console.log('Using existing public key:', existingPublicKey);
+
+    // Create key pair from the stored private key
+    const keyPair = nearAPI.KeyPair.fromString(account.privateKey);
+    console.log('Created key pair with public key:', keyPair.getPublicKey().toString());
+
+    // Get the latest block hash
+    const blockResult = await account.connection.provider.block({ finality: 'final' });
+    if (!blockResult || !blockResult.header || !blockResult.header.hash) {
+      throw new Error('Failed to get block hash');
+    }
+    const recentBlockHash = nearAPI.utils.serialize.base_decode(blockResult.header.hash);
+
+    // Create the actions array
+    const actions = [
+      nearAPI.transactions.functionCall(
+        method,
+        args,
+        '300000000000000', // gas
+        '0' // deposit
+      )
+    ];
+
+    // Get current nonce and convert to BigInt
+    const currentNonce = BigInt(accessKeys[0].access_key.nonce);
+    const nextNonce = currentNonce + BigInt(1);
+
+    // Create transaction using the existing public key
+    const transaction = nearAPI.transactions.createTransaction(
+      account.accountId,
+      nearAPI.utils.PublicKey.fromString(existingPublicKey),
+      process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
+      Number(nextNonce), // Convert back to number for the transaction
+      actions,
+      recentBlockHash
+    );
+
+    // Sign the transaction with the key pair
+    const serializedTx = nearAPI.utils.serialize.serialize(
+      nearAPI.transactions.SCHEMA,
+      transaction
+    );
+    const serializedTxHash = new Uint8Array(await crypto.subtle.digest('SHA-256', serializedTx));
+    const signature = keyPair.sign(serializedTxHash);
+
+    const signedTransaction = new nearAPI.transactions.SignedTransaction({
+      transaction,
+      signature: new nearAPI.transactions.Signature({
+        keyType: transaction.publicKey.keyType,
+        data: signature.signature
+      })
+    });
+
+    // Send the signed transaction
+    const result = await account.connection.provider.sendTransaction(signedTransaction);
+    
+    if (result.status && result.status.SuccessValue) {
+      const value = Buffer.from(result.status.SuccessValue, 'base64').toString();
+      return JSON.parse(value);
+    }
+    
+    return result;
+  } catch (err) {
+    console.error('Contract call error:', err);
+    throw err;
+  }
 };
 
 export default function Transfer({ transferParams, onClose, onRetry }) {
@@ -439,25 +546,36 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
       console.log('Starting transaction execution...');
       
       // Set up fresh account connection with key pair
-      const { account } = await setupKeyPair(nearAccount.accountId, privateKey);
+      const { account, keyPair, near } = await setupKeyPair(nearAccount.accountId, privateKey);
+      console.log('Account setup complete');
+      
+      // Verify the account state
+      const accountState = await account.state();
+      console.log('Account state:', accountState);
+      
+      // Verify the key is properly set
+      const accessKeys = await account.getAccessKeys();
+      console.log('Access keys:', accessKeys);
       
       const derivationPath = `${selectedChain.name.toLowerCase()},1`;
+      
+      // Set up the adapter first
       const adapter = await setupAdapter({
         accountId: account.accountId,
         privateKey: privateKey,
         mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
         derivationPath: derivationPath,
       });
-
       console.log('Adapter setup complete:', adapter.address);
+      
+      // Create the unsigned transaction first
       const provider = createProviderWithRetry(selectedChain.rpcUrl);
       const amountWei = ethers.parseEther(amount);
 
-      // Get latest nonce and gas price
-      const nonce = await provider.getTransactionCount(adapter.address);
-      const feeData = await provider.getFeeData();
+      // Get latest nonce and gas price with retries
+      const nonce = await withRetry(() => provider.getTransactionCount(adapter.address));
+      const feeData = await withRetry(() => provider.getFeeData());
 
-      // Create transaction payload
       const txPayload = {
         to: recipientAddress,
         value: amountWei,
@@ -465,31 +583,56 @@ export default function Transfer({ transferParams, onClose, onRetry }) {
         nonce: nonce,
         maxFeePerGas: feeData.maxFeePerGas,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-        gasLimit: 21000 // Standard ETH transfer gas limit
+        gasLimit: 21000,
+        type: 2
       };
 
-      console.log('Sending transaction:', {
-        ...txPayload,
-        value: txPayload.value.toString(),
-        maxFeePerGas: txPayload.maxFeePerGas?.toString(),
-        maxPriorityFeePerGas: txPayload.maxPriorityFeePerGas?.toString()
+      const unsignedTx = ethers.Transaction.from(txPayload);
+      const payload = ethers.getBytes(unsignedTx.unsignedHash);
+      
+      console.log('Requesting signature for payload:', Array.from(payload));
+
+      // Get MPC public key first
+      const mpcPublicKey = await callContract(account, 'public_key', {});
+      console.log('MPC public key:', mpcPublicKey);
+
+      // Request signature
+      const signResult = await callContract(account, 'sign', {
+        request: {
+          payload: Array.from(payload),
+          path: derivationPath,
+          key_version: 0
+        }
       });
 
-      const tx = await adapter.signAndSendTransaction(txPayload);
+      console.log('Sign result:', signResult);
 
-      console.log('Transaction sent:', tx);
-      setTxHash(tx);
+      // Extract signature components
+      const { big_r, s, recovery_id } = signResult;
+      const r = Buffer.from(big_r.affine_point.substring(2), 'hex');
+      const s_value = Buffer.from(s.scalar, 'hex');
+
+      // Create signed transaction
+      const signedTx = ethers.Transaction.from({
+        ...txPayload,
+        signature: {
+          r: `0x${r.toString('hex')}`,
+          s: `0x${s_value.toString('hex')}`,
+          v: recovery_id
+        }
+      });
+
+      // Broadcast the transaction
+      const tx = await provider.broadcastTransaction(signedTx.serialized);
+      console.log('Transaction sent:', tx.hash);
+      setTxHash(tx.hash);
       setProgressValue(70);
 
-      // Wait for transaction confirmation
-      const receipt = await provider.waitForTransaction(tx);
+      // Wait for confirmation
+      const receipt = await tx.wait();
       console.log('Transaction confirmed:', receipt);
-
-      // Update balance after transaction
-      const newBalance = await provider.getBalance(adapter.address);
-      setSourceBalance(ethers.formatEther(newBalance));
       setProgressValue(100);
-
+      
       onCloseModal();
       if (onClose) onClose();
 
