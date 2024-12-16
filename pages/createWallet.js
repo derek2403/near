@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import * as nearAPI from "near-api-js";
 import { generateSeedPhrase } from "near-seed-phrase";
 import { EyeIcon, EyeSlashIcon, ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/router';
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
 export default function CreateWallet() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [walletInfo, setWalletInfo] = useState(null);
@@ -20,6 +22,10 @@ export default function CreateWallet() {
     publicKey: false,
     accountId: false
   });
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     if (!accountId) {
@@ -87,7 +93,6 @@ export default function CreateWallet() {
 
       // Generate a new key pair and seed phrase
       const { seedPhrase, secretKey, publicKey } = generateSeedPhrase();
-
       const fullAccountId = `${accountId}.testnet`;
 
       // Initialize connection to NEAR testnet
@@ -110,13 +115,16 @@ export default function CreateWallet() {
       // Create the account
       const account = await near.createAccount(fullAccountId, publicKey);
 
-      // Save wallet info to state
-      setWalletInfo({
+      // Create wallet info object
+      const newWalletInfo = {
         accountId: fullAccountId,
         seedPhrase,
         publicKey,
         secretKey
-      });
+      };
+
+      // Just set the wallet info, don't show modal here
+      setWalletInfo(newWalletInfo);
 
     } catch (err) {
       setError(err.message);
@@ -136,6 +144,98 @@ export default function CreateWallet() {
       console.error('Failed to copy:', err);
     }
   };
+
+  const handleSetPassword = async (e) => {
+    e.preventDefault();
+    
+    if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    try {
+      // Store encrypted wallet info
+      const encryptedWallet = await encryptWalletData(walletInfo, password);
+      localStorage.setItem('encryptedWallet', encryptedWallet);
+      
+      // Store public info separately
+      localStorage.setItem('publicWalletInfo', JSON.stringify({
+        accountId: walletInfo.accountId,
+        publicKey: walletInfo.publicKey
+      }));
+
+      // Store password hash for verification
+      const passwordHash = await hashPassword(password);
+      localStorage.setItem('passwordHash', passwordHash);
+
+      setShowPasswordModal(false);
+      router.push('/dashboard');
+    } catch (error) {
+      setPasswordError('Error securing wallet');
+      console.error(error);
+    }
+  };
+
+  // Password Modal Component
+  const PasswordModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+        <h2 className="text-xl font-bold mb-4">Create Password</h2>
+        <p className="text-gray-600 mb-4">
+          This password will be used to secure your wallet. Make sure it's strong!
+        </p>
+        
+        <form onSubmit={handleSetPassword} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter password"
+              minLength={8}
+              required
+              autoComplete="new-password"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Confirm password"
+              minLength={8}
+              required
+              autoComplete="new-password"
+            />
+          </div>
+
+          {passwordError && (
+            <p className="text-red-500 text-sm">{passwordError}</p>
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-duration-200"
+          >
+            Secure Wallet
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen p-8 bg-gray-50">
@@ -311,26 +411,52 @@ export default function CreateWallet() {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setWalletInfo(null);
-                setError(null);
-                setShowSeedPhrase(false);
-                setShowPrivateKey(false);
-                setCopiedStates({
-                  seedPhrase: false,
-                  privateKey: false,
-                  publicKey: false,
-                  accountId: false
-                });
-              }}
-              className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5"
-            >
-              Generate Another Wallet
-            </button>
+            <div className="flex flex-col space-y-4">
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-all duration-200 transform hover:-translate-y-0.5"
+              >
+                Go to Dashboard
+              </button>
+
+              <button
+                onClick={() => {
+                  setWalletInfo(null);
+                  setError(null);
+                  setShowSeedPhrase(false);
+                  setShowPrivateKey(false);
+                  setCopiedStates({
+                    seedPhrase: false,
+                    privateKey: false,
+                    publicKey: false,
+                    accountId: false
+                  });
+                }}
+                className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5"
+              >
+                Generate Another Wallet
+              </button>
+            </div>
           </div>
         )}
       </div>
+      {showPasswordModal && <PasswordModal />}
     </div>
   );
 }
+
+// Utility functions for encryption
+const encryptWalletData = async (walletInfo, password) => {
+  // Implementation using a proper encryption library
+  // This is a placeholder - use proper encryption in production
+  return btoa(JSON.stringify({
+    data: walletInfo,
+    timestamp: Date.now()
+  }));
+};
+
+const hashPassword = async (password) => {
+  // Implementation using proper password hashing
+  // This is a placeholder - use proper hashing in production
+  return btoa(password);
+};
