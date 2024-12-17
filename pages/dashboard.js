@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { Input, Button, Card, CardBody, Spinner } from "@nextui-org/react";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -40,16 +41,20 @@ export default function Dashboard() {
   if (!walletInfo) {
     return (
       <div className="min-h-screen p-8 bg-gray-50">
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8">
-          <h1 className="text-2xl font-bold mb-4">No Wallet Found</h1>
-          <p className="text-gray-600 mb-4">You need to create a wallet first.</p>
-          <button
-            onClick={() => router.push('/createWallet')}
-            className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600"
-          >
-            Create Wallet
-          </button>
-        </div>
+        <Card className="max-w-md mx-auto">
+          <CardBody className="p-8">
+            <h1 className="text-2xl font-bold mb-4">No Wallet Found</h1>
+            <p className="text-gray-600 mb-6">You need to create a wallet first.</p>
+            <Button
+              onClick={() => router.push('/createWallet')}
+              color="primary"
+              className="w-full"
+              size="lg"
+            >
+              Create Wallet
+            </Button>
+          </CardBody>
+        </Card>
       </div>
     );
   }
@@ -57,36 +62,41 @@ export default function Dashboard() {
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen p-8 bg-gray-50">
-        <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8">
-          <h1 className="text-2xl font-bold mb-4">Welcome Back</h1>
-          <p className="text-gray-600 mb-6">Enter your password to access your wallet.</p>
-          
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
+        <Card className="max-w-md mx-auto">
+          <CardBody className="p-8">
+            <h1 className="text-2xl font-bold mb-4">Welcome Back</h1>
+            <p className="text-gray-600 mb-6">Enter your password to access your wallet.</p>
+            
+            <form onSubmit={handleLogin} className="space-y-6">
+              <Input
+                label="Password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 border rounded"
-                placeholder="Enter your password"
+                variant="bordered"
+                className="max-w-full"
+                required
               />
-            </div>
 
-            {loginError && (
-              <p className="text-red-500 text-sm">{loginError}</p>
-            )}
+              {loginError && (
+                <Card className="bg-danger-50 border-none">
+                  <CardBody className="text-danger py-2">
+                    {loginError}
+                  </CardBody>
+                </Card>
+              )}
 
-            <button
-              type="submit"
-              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-            >
-              Unlock
-            </button>
-          </form>
-        </div>
+              <Button
+                type="submit"
+                color="primary"
+                className="w-full"
+                size="lg"
+              >
+                Unlock
+              </Button>
+            </form>
+          </CardBody>
+        </Card>
       </div>
     );
   }
