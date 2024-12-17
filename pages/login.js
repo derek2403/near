@@ -3,6 +3,7 @@ import { parseSeedPhrase } from "near-seed-phrase";
 import * as nearAPI from "near-api-js";
 import { useRouter } from 'next/router';
 import { Input, Button, Card, CardBody, Tabs, Tab, Textarea } from "@nextui-org/react";
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
@@ -12,10 +13,11 @@ export default function Login() {
   const [privateKey, setPrivateKey] = useState('');
   const [error, setError] = useState(null);
   const [loggedInAccount, setLoggedInAccount] = useState(null);
-  const [accountId, setAccountId] = useState('');
   const router = useRouter();
   
   const [loading, setLoading] = useState(false);
+  const [showSeedPhrase, setShowSeedPhrase] = useState(false);
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,8 +27,8 @@ export default function Login() {
     try {
       let keyPair;
       let publicKey;
+      let finalAccountId;
       
-      // Handle login based on method
       if (loginMethod === 'seedPhrase') {
         if (!seedPhrase.trim()) {
           throw new Error('Please enter your seed phrase');
@@ -34,12 +36,22 @@ export default function Login() {
         const parsedKey = parseSeedPhrase(seedPhrase);
         keyPair = KeyPair.fromString(parsedKey.secretKey);
         publicKey = parsedKey.publicKey;
+        // Extract account ID from seed phrase
+        finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
       } else {
         if (!privateKey.trim()) {
           throw new Error('Please enter your private key');
         }
         keyPair = KeyPair.fromString(privateKey);
         publicKey = keyPair.getPublicKey().toString();
+        
+        // Try to extract account from private key or throw error
+        try {
+          const account = await near.account(publicKey);
+          finalAccountId = account.accountId;
+        } catch (err) {
+          throw new Error('Unable to determine account from private key');
+        }
       }
 
       // Initialize connection to NEAR
@@ -54,18 +66,6 @@ export default function Login() {
 
       const near = await connect(connectionConfig);
       
-      let finalAccountId;
-      
-      if (loginMethod === 'seedPhrase') {
-        // For seed phrase, try to extract account ID from the first word
-        finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
-      } else {
-        if (!accountId.trim()) {
-          throw new Error('Please enter your account ID');
-        }
-        finalAccountId = accountId.trim() + '.testnet';
-      }
-
       // Verify the account exists and the key pair matches
       try {
         const account = await near.account(finalAccountId);
@@ -156,27 +156,43 @@ export default function Login() {
                       onChange={(e) => setSeedPhrase(e.target.value)}
                       variant="bordered"
                       className="w-full"
+                      type={showSeedPhrase ? "text" : "password"}
+                      endContent={
+                        <button
+                          onClick={() => setShowSeedPhrase(!showSeedPhrase)}
+                          className="focus:outline-none"
+                        >
+                          {showSeedPhrase ? (
+                            <EyeSlashIcon className="h-5 w-5 text-gray-500" />
+                          ) : (
+                            <EyeIcon className="h-5 w-5 text-gray-500" />
+                          )}
+                        </button>
+                      }
                     />
                   </div>
                 </Tab>
                 <Tab key="privateKey" title="Private Key">
-                  <div className="pt-4 space-y-4">
+                  <div className="pt-4">
                     <Input
-                      type="password"
+                      type={showPrivateKey ? "text" : "password"}
                       label="Enter your private key"
                       value={privateKey}
                       onChange={(e) => setPrivateKey(e.target.value)}
                       variant="bordered"
                       className="w-full"
-                    />
-                    <Input
-                      type="text"
-                      label="Enter your account ID"
-                      value={accountId}
-                      onChange={(e) => setAccountId(e.target.value)}
-                      variant="bordered"
-                      placeholder="example (without .testnet)"
-                      className="w-full"
+                      endContent={
+                        <button
+                          onClick={() => setShowPrivateKey(!showPrivateKey)}
+                          className="focus:outline-none"
+                        >
+                          {showPrivateKey ? (
+                            <EyeSlashIcon className="h-5 w-5 text-gray-500" />
+                          ) : (
+                            <EyeIcon className="h-5 w-5 text-gray-500" />
+                          )}
+                        </button>
+                      }
                     />
                   </div>
                 </Tab>
