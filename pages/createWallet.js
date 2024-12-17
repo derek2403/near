@@ -5,6 +5,7 @@ import { EyeIcon, EyeSlashIcon, ClipboardIcon, ClipboardDocumentCheckIcon } from
 import { useRouter } from 'next/router';
 import CreatePassword from '../components/CreatePassword';
 import { useDisclosure } from '@nextui-org/react';
+import { Input, Button, Card, CardBody, Spinner } from "@nextui-org/react";
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
@@ -172,207 +173,215 @@ export default function CreateWallet() {
 
   return (
     <div className="min-h-screen p-8 bg-gray-50">
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-8">
-        <h1 className="text-2xl font-bold mb-4">Create New Account</h1>
-        <p className="text-gray-600 mb-8">
-          Enter an Account ID to use with your NEAR account. Your Account ID will be used for all NEAR operations, including sending and receiving assets.
-        </p>
+      <Card className="max-w-md mx-auto md:max-w-2xl">
+        <CardBody className="p-8">
+          <h1 className="text-2xl font-bold mb-4">Create New Account</h1>
+          <p className="text-gray-600 mb-8">
+            Enter an Account ID to use with your NEAR account. Your Account ID will be used for all NEAR operations, including sending and receiving assets.
+          </p>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
-            <p>{error}</p>
-          </div>
-        )}
-
-        {!walletInfo && (
-          <div>
+          {error && (
             <div className="mb-6">
-              <label className="block text-gray-700 mb-2">Account ID</label>
-              <div className="flex items-center border rounded-lg overflow-hidden hover:border-gray-400 transition-colors duration-200">
-                <input
-                  type="text"
+              <Card className="bg-danger-50 border-none">
+                <CardBody className="text-danger">
+                  {error}
+                </CardBody>
+              </Card>
+            </div>
+          )}
+
+          {!walletInfo && (
+            <div>
+              <div className="mb-6">
+                <Input
+                  label="Enter your Wallet Name"
                   value={accountId}
                   onChange={(e) => {
                     setAccountId(e.target.value.toLowerCase());
                     setIsAvailable(null);
                   }}
-                  placeholder="yourname"
-                  className="flex-1 p-3 outline-none focus:ring-2 focus:ring-blue-500"
+                  variant="bordered"
+                  endContent={<span className="text-gray-500">.testnet</span>}
+                  className="max-w-full"
                 />
-                <span className="px-3 py-3 bg-gray-100 text-gray-500">.testnet</span>
               </div>
-            </div>
 
-            {isChecking && (
-              <div className="text-gray-600 mb-4">
-                Checking availability...
-              </div>
-            )}
+              {isChecking && (
+                <div className="text-gray-600 mb-4 flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Checking availability...</span>
+                </div>
+              )}
 
-            {isAvailable !== null && (
-              <div className={`p-3 rounded-lg mb-6 ${isAvailable
-                  ? 'bg-green-50 text-green-600 border border-green-200'
-                  : 'bg-red-50 text-red-600 border border-red-200'
-                }`}>
-                {isAvailable
-                  ? `Congrats! ${accountId}.testnet is available.`
-                  : 'Account ID is taken. Try something else.'}
-              </div>
-            )}
+              {isAvailable !== null && (
+                <div className="mb-6">
+                  <Card className={isAvailable ? "bg-success-50" : "bg-danger-50"}>
+                    <CardBody className={isAvailable ? "text-success" : "text-danger"}>
+                      {isAvailable
+                        ? `Congrats! ${accountId}.testnet is available.`
+                        : 'Account ID is taken. Try something else.'}
+                    </CardBody>
+                  </Card>
+                </div>
+              )}
 
-            <div className="space-y-4">
-              <button
+              <Button
                 onClick={generateWallet}
-                disabled={loading || !isAvailable || !accountId}
-                className={`w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-all duration-200 transform hover:-translate-y-0.5 ${loading || !isAvailable || !accountId ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                isDisabled={loading || !isAvailable || !accountId}
+                color="primary"
+                className="w-full"
+                size="lg"
+                isLoading={loading}
+                spinner={<Spinner color="white" size="sm" />}
               >
-                {loading ? 'Generating Wallet...' : 'Generate New Wallet'}
-              </button>
+                Generate New Wallet
+              </Button>
             </div>
-          </div>
-        )}
+          )}
 
-        {walletInfo && (
-          <div className="space-y-6">
-            <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg">
-              Wallet Generated Successfully!
-            </div>
-            
-            <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
-              <h2 className="font-semibold text-yellow-800 mb-4">
-                Important: Save This Information
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Account ID:</label>
-                  <div className="flex items-center bg-white p-3 rounded-lg border">
-                    <p className="text-sm flex-1">{walletInfo.accountId}</p>
-                    <button
-                      onClick={() => handleCopy(walletInfo.accountId, 'accountId')}
-                      className="ml-2 text-gray-500 hover:text-gray-700"
-                    >
-                      {copiedStates.accountId ? (
-                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <ClipboardIcon className="h-5 w-5" />
-                      )}
-                    </button>
+          {walletInfo && (
+            <div className="space-y-6">
+              <Card className="bg-success-50 border-none">
+                <CardBody className="text-success">
+                  Wallet Generated Successfully!
+                </CardBody>
+              </Card>
+              
+              <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+                <h2 className="font-semibold text-yellow-800 mb-4">
+                  Important: Save This Information
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Account ID:</label>
+                    <div className="flex items-center bg-white p-3 rounded-lg border">
+                      <p className="text-sm flex-1">{walletInfo.accountId}</p>
+                      <button
+                        onClick={() => handleCopy(walletInfo.accountId, 'accountId')}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {copiedStates.accountId ? (
+                          <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Seed Phrase:</label>
-                  <div className="flex items-center bg-white p-3 rounded-lg border">
-                    <p className={`text-sm flex-1 break-all ${!showSeedPhrase ? 'blur-sm' : ''}`}>
-                      {walletInfo.seedPhrase}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Seed Phrase:</label>
+                    <div className="flex items-center bg-white p-3 rounded-lg border">
+                      <p className={`text-sm flex-1 break-all ${!showSeedPhrase ? 'blur-sm' : ''}`}>
+                        {walletInfo.seedPhrase}
+                      </p>
+                      <button
+                        onClick={() => handleCopy(walletInfo.seedPhrase, 'seedPhrase')}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {copiedStates.seedPhrase ? (
+                          <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setShowSeedPhrase(!showSeedPhrase)}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showSeedPhrase ? (
+                          <EyeSlashIcon className="h-5 w-5" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Private Key:</label>
+                    <div className="flex items-center bg-white p-3 rounded-lg border">
+                      <p className={`text-sm flex-1 break-all ${!showPrivateKey ? 'blur-sm' : ''}`}>
+                        {walletInfo.secretKey}
+                      </p>
+                      <button
+                        onClick={() => handleCopy(walletInfo.secretKey, 'privateKey')}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {copiedStates.privateKey ? (
+                          <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setShowPrivateKey(!showPrivateKey)}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPrivateKey ? (
+                          <EyeSlashIcon className="h-5 w-5" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Public Key:</label>
+                    <div className="flex items-center bg-white p-3 rounded-lg border">
+                      <p className="text-sm flex-1 break-all">{walletInfo.publicKey}</p>
+                      <button
+                        onClick={() => handleCopy(walletInfo.publicKey, 'publicKey')}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {copiedStates.publicKey ? (
+                          <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-sm font-medium">
+                      ⚠️ Warning: Store this information securely. Never share your private key or seed phrase with anyone!
                     </p>
-                    <button
-                      onClick={() => handleCopy(walletInfo.seedPhrase, 'seedPhrase')}
-                      className="ml-2 text-gray-500 hover:text-gray-700"
-                    >
-                      {copiedStates.seedPhrase ? (
-                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <ClipboardIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setShowSeedPhrase(!showSeedPhrase)}
-                      className="ml-2 text-gray-500 hover:text-gray-700"
-                    >
-                      {showSeedPhrase ? (
-                        <EyeSlashIcon className="h-5 w-5" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5" />
-                      )}
-                    </button>
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Private Key:</label>
-                  <div className="flex items-center bg-white p-3 rounded-lg border">
-                    <p className={`text-sm flex-1 break-all ${!showPrivateKey ? 'blur-sm' : ''}`}>
-                      {walletInfo.secretKey}
-                    </p>
-                    <button
-                      onClick={() => handleCopy(walletInfo.secretKey, 'privateKey')}
-                      className="ml-2 text-gray-500 hover:text-gray-700"
-                    >
-                      {copiedStates.privateKey ? (
-                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <ClipboardIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setShowPrivateKey(!showPrivateKey)}
-                      className="ml-2 text-gray-500 hover:text-gray-700"
-                    >
-                      {showPrivateKey ? (
-                        <EyeSlashIcon className="h-5 w-5" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Public Key:</label>
-                  <div className="flex items-center bg-white p-3 rounded-lg border">
-                    <p className="text-sm flex-1 break-all">{walletInfo.publicKey}</p>
-                    <button
-                      onClick={() => handleCopy(walletInfo.publicKey, 'publicKey')}
-                      className="ml-2 text-gray-500 hover:text-gray-700"
-                    >
-                      {copiedStates.publicKey ? (
-                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <ClipboardIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-600 text-sm font-medium">
-                    ⚠️ Warning: Store this information securely. Never share your private key or seed phrase with anyone!
-                  </p>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-col space-y-4">
-              <button
-                onClick={onOpen}
-                className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-all duration-200 transform hover:-translate-y-0.5"
-              >
-                Go to Dashboard
-              </button>
+              <div className="flex flex-col space-y-4">
+                <button
+                  onClick={onOpen}
+                  className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-all duration-200 transform hover:-translate-y-0.5"
+                >
+                  Go to Dashboard
+                </button>
 
-              <button
-                onClick={() => {
-                  setWalletInfo(null);
-                  setError(null);
-                  setShowSeedPhrase(false);
-                  setShowPrivateKey(false);
-                  setCopiedStates({
-                    seedPhrase: false,
-                    privateKey: false,
-                    publicKey: false,
-                    accountId: false
-                  });
-                }}
-                className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5"
-              >
-                Generate Another Wallet
-              </button>
+                <button
+                  onClick={() => {
+                    setWalletInfo(null);
+                    setError(null);
+                    setShowSeedPhrase(false);
+                    setShowPrivateKey(false);
+                    setCopiedStates({
+                      seedPhrase: false,
+                      privateKey: false,
+                      publicKey: false,
+                      accountId: false
+                    });
+                  }}
+                  className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5"
+                >
+                  Generate Another Wallet
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </CardBody>
+      </Card>
       <CreatePassword 
         isOpen={isOpen} 
         onClose={onClose}
