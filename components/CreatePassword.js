@@ -14,16 +14,15 @@ import {
   export default function CreatePassword({ isOpen, onClose, onSubmit, error }) {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [localError, setLocalError] = useState('');
   
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      
+    const handleSubmit = () => {
       if (password.length < 8) {
-        setError('Password must be at least 8 characters');
+        setLocalError('Password must be at least 8 characters');
         return;
       }
       if (password !== confirmPassword) {
-        setError('Passwords do not match');
+        setLocalError('Passwords do not match');
         return;
       }
   
@@ -41,8 +40,7 @@ import {
                 //   endContent={
                 //     <LockIcon className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
                 //   }
-                  label="Password"
-                  placeholder="Enter your password"
+                  label="Enter your password"
                   type="password"
                   variant="bordered"
                   value={password}
@@ -55,7 +53,6 @@ import {
                 //     <LockIcon className="text-2xl text-default-400 pointer-events-none flex-shrink-0" />
                 //   }
                   label="Confirm Password"
-                  placeholder="Confirm your password"
                   type="password"
                   variant="bordered"
                   value={confirmPassword}
@@ -63,8 +60,8 @@ import {
                   minLength={8}
                   required
                 />
-                {error && (
-                  <p className="text-red-500 text-sm">{error}</p>
+                {(error || localError) && (
+                  <p className="text-red-500 text-sm">{error || localError}</p>
                 )}
               </ModalBody>
               <ModalFooter>
