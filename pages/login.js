@@ -14,7 +14,7 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [loggedInAccount, setLoggedInAccount] = useState(null);
   const router = useRouter();
-  
+
   const [loading, setLoading] = useState(false);
   const [showSeedPhrase, setShowSeedPhrase] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
@@ -28,7 +28,7 @@ export default function Login() {
       let keyPair;
       let publicKey;
       let finalAccountId;
-      
+
       if (loginMethod === 'seedPhrase') {
         if (!seedPhrase.trim()) {
           throw new Error('Please enter your seed phrase');
@@ -44,7 +44,7 @@ export default function Login() {
         }
         keyPair = KeyPair.fromString(privateKey);
         publicKey = keyPair.getPublicKey().toString();
-        
+
         // Try to extract account from private key or throw error
         try {
           const account = await near.account(publicKey);
@@ -65,12 +65,12 @@ export default function Login() {
       };
 
       const near = await connect(connectionConfig);
-      
+
       // Verify the account exists and the key pair matches
       try {
         const account = await near.account(finalAccountId);
         await account.state(); // This will throw if account doesn't exist
-        
+
         // Store the key in keyStore
         await connectionConfig.keyStore.setKey("testnet", finalAccountId, keyPair);
 
@@ -136,7 +136,7 @@ export default function Login() {
 
           {!loggedInAccount && (
             <div className="space-y-6">
-              <Tabs 
+              <Tabs
                 selectedKey={loginMethod}
                 onSelectionChange={setLoginMethod}
                 variant="bordered"
@@ -215,14 +215,15 @@ export default function Login() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Don't have a wallet?{' '}
-                <Button
+                <span
                   onClick={() => router.push('/createWallet')}
-                  variant="light"
-                  color="primary"
-                  className="p-0"
+                  style={{
+                    color: "#0070f3", // Primary blue color
+                    cursor: "pointer"
+                  }}
                 >
                   Create one here
-                </Button>
+                </span>
               </p>
             </div>
           )}
