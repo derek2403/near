@@ -4,6 +4,8 @@ import * as nearAPI from "near-api-js";
 import { useRouter } from 'next/router';
 import { Input, Button, Card, CardBody, Tabs, Tab, Textarea } from "@nextui-org/react";
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import CreatePassword from '../components/CreatePassword';
+import { useDisclosure } from '@nextui-org/react';
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
@@ -14,13 +16,15 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [loggedInAccount, setLoggedInAccount] = useState(null);
   const router = useRouter();
-  
+
   const [loading, setLoading] = useState(false);
   const [showSeedPhrase, setShowSeedPhrase] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const {isOpen, onOpen, onClose} = useDisclosure();
+  const [passwordError, setPasswordError] = useState('');
+  const [tempWalletInfo, setTempWalletInfo] = useState(null);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleLogin = async () => {
     setLoading(true);
     setError(null);
 
@@ -28,7 +32,7 @@ export default function Login() {
       let keyPair;
       let publicKey;
       let finalAccountId;
-      
+
       if (loginMethod === 'seedPhrase') {
         if (!seedPhrase.trim()) {
           throw new Error('Please enter your seed phrase');
@@ -36,7 +40,6 @@ export default function Login() {
         const parsedKey = parseSeedPhrase(seedPhrase);
         keyPair = KeyPair.fromString(parsedKey.secretKey);
         publicKey = parsedKey.publicKey;
-        // Extract account ID from seed phrase
         finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
       } else {
         if (!privateKey.trim()) {
@@ -45,50 +48,29 @@ export default function Login() {
         keyPair = KeyPair.fromString(privateKey);
         publicKey = keyPair.getPublicKey().toString();
         
-        // Try to extract account from private key or throw error
-        try {
-          const account = await near.account(publicKey);
-          finalAccountId = account.accountId;
-        } catch (err) {
-          throw new Error('Unable to determine account from private key');
-        }
+        // Try to extract account from private key
+        const connectionConfig = {
+          networkId: "testnet",
+          keyStore: new keyStores.InMemoryKeyStore(),
+          nodeUrl: "https://rpc.testnet.near.org",
+        };
+        const near = await connect(connectionConfig);
+        const account = await near.account(publicKey);
+        finalAccountId = account.accountId;
       }
 
-      // Initialize connection to NEAR
-      const connectionConfig = {
-        networkId: "testnet",
-        keyStore: new keyStores.BrowserLocalStorageKeyStore(),
-        nodeUrl: "https://rpc.testnet.near.org",
-        walletUrl: "https://testnet.mynearwallet.com/",
-        helperUrl: "https://helper.testnet.near.org",
-        explorerUrl: "https://testnet.nearblocks.io"
+      // Create wallet info object
+      const walletInfo = {
+        accountId: finalAccountId,
+        publicKey: publicKey.toString(),
+        secretKey: keyPair.toString(),
+        seedPhrase: loginMethod === 'seedPhrase' ? seedPhrase : null
       };
 
-      const near = await connect(connectionConfig);
-      
-      // Verify the account exists and the key pair matches
-      try {
-        const account = await near.account(finalAccountId);
-        await account.state(); // This will throw if account doesn't exist
-        
-        // Store the key in keyStore
-        await connectionConfig.keyStore.setKey("testnet", finalAccountId, keyPair);
-
-        // Store account ID and private key in localStorage
-        localStorage.setItem('nearAccountId', finalAccountId);
-        localStorage.setItem('nearPrivateKey', keyPair.toString());
-
-        console.log('Login successful');
-        console.log('Account ID:', finalAccountId);
-        setLoggedInAccount(finalAccountId);
-        console.log('LoggedInAccount state set to:', finalAccountId);
-
-        // Redirect to transfer page
-        router.push('/transfer');
-      } catch (accountErr) {
-        console.error('Account verification error:', accountErr);
-        throw new Error('Unable to verify account. Please check your credentials.');
-      }
+      // Store temporarily and open password modal
+      setTempWalletInfo(walletInfo);
+      setLoggedInAccount(finalAccountId);
+      onOpen();
 
     } catch (err) {
       console.error('Login error:', err);
@@ -96,6 +78,46 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSetPassword = async (password) => {
+    try {
+      // Store encrypted wallet info
+      const encryptedWallet = await encryptWalletData(tempWalletInfo, password);
+      localStorage.setItem('encryptedWallet', encryptedWallet);
+      
+      // Store public info separately
+      localStorage.setItem('publicWalletInfo', JSON.stringify({
+        accountId: tempWalletInfo.accountId,
+        publicKey: tempWalletInfo.publicKey
+      }));
+
+      // Store password hash for verification
+      const passwordHash = await hashPassword(password);
+      localStorage.setItem('passwordHash', passwordHash);
+
+      onClose();
+      router.push('/dashboard');
+    } catch (error) {
+      setPasswordError('Error securing wallet');
+      console.error(error);
+    }
+  };
+
+  // Add the utility functions
+  const encryptWalletData = async (walletInfo, password) => {
+    // Implementation using a proper encryption library
+    // This is a placeholder - use proper encryption in production
+    return btoa(JSON.stringify({
+      data: walletInfo,
+      timestamp: Date.now()
+    }));
+  };
+
+  const hashPassword = async (password) => {
+    // Implementation using proper password hashing
+    // This is a placeholder - use proper hashing in production
+    return btoa(password);
   };
 
   return (
@@ -136,7 +158,7 @@ export default function Login() {
 
           {!loggedInAccount && (
             <div className="space-y-6">
-              <Tabs 
+              <Tabs
                 selectedKey={loginMethod}
                 onSelectionChange={setLoginMethod}
                 variant="bordered"
@@ -215,19 +237,28 @@ export default function Login() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Don't have a wallet?{' '}
-                <Button
+                <span
                   onClick={() => router.push('/createWallet')}
-                  variant="light"
-                  color="primary"
-                  className="p-0"
+                  style={{
+                    color: "#0070f3", // Primary blue color
+                    cursor: "pointer"
+                  }}
                 >
                   Create one here
-                </Button>
+                </span>
               </p>
             </div>
           )}
         </CardBody>
       </Card>
+
+      {/* Add CreatePassword modal */}
+      <CreatePassword 
+        isOpen={isOpen} 
+        onClose={onClose}
+        onSubmit={handleSetPassword}
+        error={passwordError}
+      />
     </div>
   );
 }

@@ -380,6 +380,21 @@ export default function CreateWallet() {
               </div>
             </div>
           )}
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Already have a wallet?{' '}
+              <span
+                onClick={() => router.push('/login')}
+                style={{
+                  color: "#0070f3",
+                  cursor: "pointer"
+                }}
+              >
+                Login here
+              </span>
+            </p>
+          </div>
         </CardBody>
       </Card>
       <CreatePassword 
