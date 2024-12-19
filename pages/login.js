@@ -37,26 +37,55 @@ export default function Login() {
         if (!seedPhrase.trim()) {
           throw new Error('Please enter your seed phrase');
         }
+        
+        // Parse seed phrase and get key pair
+        console.log('Processing seed phrase...');
         const parsedKey = parseSeedPhrase(seedPhrase);
         keyPair = KeyPair.fromString(parsedKey.secretKey);
         publicKey = parsedKey.publicKey;
+        
+        // Get account ID from the first word of seed phrase
         finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
+        
+        // Log the reconstructed information
+        console.log('From Seed Phrase:');
+        console.log('Public Key:', publicKey);
+        console.log('Account ID:', finalAccountId);
+        
       } else {
         if (!privateKey.trim()) {
           throw new Error('Please enter your private key');
         }
+
+        // Create key pair from private key
+        console.log('Processing private key...');
         keyPair = KeyPair.fromString(privateKey);
         publicKey = keyPair.getPublicKey().toString();
         
-        // Try to extract account from private key
+        // Set up connection to get account info
         const connectionConfig = {
           networkId: "testnet",
           keyStore: new keyStores.InMemoryKeyStore(),
           nodeUrl: "https://rpc.testnet.near.org",
         };
+
+        // Connect to NEAR and get account details
         const near = await connect(connectionConfig);
-        const account = await near.account(publicKey);
-        finalAccountId = account.accountId;
+        
+        try {
+          // Try to get account info using the public key
+          const account = await near.account(publicKey);
+          finalAccountId = account.accountId;
+          
+          // Log the reconstructed information
+          console.log('From Private Key:');
+          console.log('Public Key:', publicKey);
+          console.log('Account ID:', finalAccountId);
+          
+        } catch (accountError) {
+          console.error('Error getting account from private key:', accountError);
+          throw new Error('Could not retrieve account information from private key');
+        }
       }
 
       // Create wallet info object
@@ -66,6 +95,11 @@ export default function Login() {
         secretKey: keyPair.toString(),
         seedPhrase: loginMethod === 'seedPhrase' ? seedPhrase : null
       };
+
+      // Log the final wallet info (except secret key for security)
+      console.log('Final Wallet Info:');
+      console.log('Account ID:', walletInfo.accountId);
+      console.log('Public Key:', walletInfo.publicKey);
 
       // Store temporarily and open password modal
       setTempWalletInfo(walletInfo);

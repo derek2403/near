@@ -17,7 +17,7 @@ import {
     const [localError, setLocalError] = useState('');
   
     const handleSubmit = () => {
-      if (password.length < 8) {
+      if (password.length < 1) {
         setLocalError('Password must be at least 8 characters');
         return;
       }
