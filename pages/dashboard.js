@@ -4,12 +4,13 @@ import { Card, CardBody, Button, Tooltip } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 
-const { connect, keyStores } = nearAPI;
+const { connect, keyStores, providers } = nearAPI;
 
 export default function Dashboard() {
   const router = useRouter();
   const [walletInfo, setWalletInfo] = useState(null);
   const [balance, setBalance] = useState("0");
+  const [yoctoBalance, setYoctoBalance] = useState("0");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
 
@@ -27,20 +28,29 @@ export default function Dashboard() {
         const parsedInfo = JSON.parse(publicInfo);
         setWalletInfo(parsedInfo);
 
-        // Connect to NEAR and get balance
-        const connectionConfig = {
-          networkId: "testnet",
-          keyStore: new keyStores.InMemoryKeyStore(),
-          nodeUrl: "https://rpc.testnet.near.org",
-        };
+        // Create JSON RPC provider
+        const provider = new providers.JsonRpcProvider({
+          url: "https://rpc.testnet.near.org"
+        });
 
-        const near = await connect(connectionConfig);
-        const account = await near.account(parsedInfo.accountId);
-        const accountBalance = await account.getAccountBalance();
+        // Get account balance using RPC
+        const accountState = await provider.query({
+          request_type: 'view_account',
+          finality: 'final',
+          account_id: parsedInfo.accountId
+        });
+
+        console.log('Account State:', accountState);
         
-        // Convert balance from yoctoNEAR to NEAR
-        const nearBalance = nearAPI.utils.format.formatNearAmount(accountBalance.available);
-        setBalance(nearBalance);
+        // Store yoctoNEAR balance for logs
+        const yoctoNearBalance = accountState.amount;
+        console.log('Balance in yoctoNEAR:', yoctoNearBalance);
+
+        // Convert to NEAR and format to 6 decimal places
+        const nearBalance = nearAPI.utils.format.formatNearAmount(yoctoNearBalance);
+        const formattedBalance = Number(nearBalance).toFixed(6);
+        setBalance(formattedBalance);
+        console.log('Balance in NEAR:', formattedBalance);
 
       } catch (err) {
         setError('Error loading wallet information');
@@ -87,18 +97,18 @@ export default function Dashboard() {
         </div>
 
         {/* Main Balance Card */}
-        <Card className="bg-gradient-to-r from-primary-500 to-primary-600">
+        <Card>
           <CardBody className="p-8">
-            <div className="text-white">
+            <div className="text-black">
               <div className="text-sm opacity-80 mb-1">Total Balance</div>
               <div className="text-4xl font-bold mb-4">{balance} NEAR</div>
               <div className="flex items-center space-x-2">
                 <div className="text-sm opacity-80">Account ID:</div>
-                <div className="font-mono">{walletInfo.accountId}</div>
+                <div className="font-mono">{walletInfo?.accountId}</div>
                 <Tooltip content={copied ? "Copied!" : "Copy to clipboard"}>
                   <button
-                    onClick={() => handleCopy(walletInfo.accountId)}
-                    className="text-white opacity-80 hover:opacity-100"
+                    onClick={() => handleCopy(walletInfo?.accountId)}
+                    className="text-black opacity-80 hover:opacity-100"
                   >
                     {copied ? (
                       <ClipboardDocumentCheckIcon className="h-5 w-5" />
