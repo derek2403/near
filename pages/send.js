@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { Card, CardBody, Button, Input, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Form } from "@nextui-org/react";
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 export default function Send() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function Send() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [error, setError] = useState(null);
-  const [submitted, setSubmitted] = useState(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   // Available coins (can be expanded)
   const coins = [
@@ -25,13 +26,83 @@ export default function Send() {
     }
   };
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData);
-    setSubmitted(data);
-    // Will add transaction logic here later
+    
+    try {
+      // Transaction logic will go here
+      
+      // Just set success state, no auto-redirect
+      setIsSuccess(true);
+      
+      // Remove the auto-redirect timeout
+      // setTimeout(() => {
+      //   router.push('/dashboard');
+      // }, 3000);
+    } catch (err) {
+      setError(err.message);
+    }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
+        <div className="w-64 h-64 mb-6">
+          <DotLottieReact
+            src="https://lottie.host/de3a77dc-d723-4462-a832-e2928836c922/7LKOuBzujP.lottie"
+            autoplay
+            loop={false}
+          />
+        </div>
+        <Card className="max-w-md w-full">
+          <CardBody className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-success mb-2">
+              Transaction Successful!
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Your transaction has been submitted successfully.
+            </p>
+            <div className="space-y-2 mb-6">
+              <p className="text-sm">
+                <span className="text-gray-500">Amount:</span>{' '}
+                <span className="font-medium">{amount} {selectedCoin.name}</span>
+              </p>
+              <p className="text-sm">
+                <span className="text-gray-500">To:</span>{' '}
+                <span className="font-medium">{recipientAddress}</span>
+              </p>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2">
+              <Button
+                color="primary"
+                variant="flat"
+                onClick={() => {
+                  setIsSuccess(false);
+                  setAmount('');
+                  setRecipientAddress('');
+                }}
+                className="w-full"
+              >
+                Send Another Transaction
+              </Button>
+              <Button
+                color="default"
+                variant="light"
+                onClick={() => router.push('/dashboard')}
+                className="w-full"
+              >
+                Back to Dashboard
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-8 bg-gray-50">
@@ -90,12 +161,7 @@ export default function Send() {
             {/* Recipient Address */}
             <Input
               isRequired
-              label={
-                <div className="flex">
-                  Recipient Address
-                  <span className="text-danger ml-1">*</span>
-                </div>
-              }
+              label="Recipient Address"
               name="recipientAddress"
               placeholder="Enter wallet address"
               value={recipientAddress}
@@ -109,12 +175,7 @@ export default function Send() {
             <Input
               isRequired
               type="text"
-              label={
-                <div className="flex">
-                  Amount
-                  <span className="text-danger ml-1">*</span>
-                </div>
-              }
+              label="Amount"
               name="amount"
               placeholder={`Enter amount in ${selectedCoin.name}`}
               value={amount}
@@ -146,14 +207,6 @@ export default function Send() {
               Continue
             </Button>
           </Form>
-
-          {submitted && (
-            <div className="mt-4 p-3 bg-default-100 rounded-lg">
-              <p className="text-sm text-default-700">
-                Submitted data: <code>{JSON.stringify(submitted)}</code>
-              </p>
-            </div>
-          )}
         </CardBody>
       </Card>
     </div>
