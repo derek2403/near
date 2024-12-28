@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { Card, CardBody, Button, Input, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Form } from "@nextui-org/react";
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+
+const { connect, keyStores } = nearAPI;
 
 export default function Send() {
   const router = useRouter();
@@ -12,6 +14,7 @@ export default function Send() {
   const [amount, setAmount] = useState('');
   const [error, setError] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [txHash, setTxHash] = useState('');
 
   // Available coins (can be expanded)
   const coins = [
@@ -28,22 +31,61 @@ export default function Send() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData);
+    setError(null);
     
     try {
-      // Transaction logic will go here
+      // Get sender's wallet info from localStorage
+      const publicInfo = localStorage.getItem('publicWalletInfo');
+      const encryptedWallet = localStorage.getItem('encryptedWallet');
       
-      // Just set success state, no auto-redirect
+      if (!publicInfo || !encryptedWallet) {
+        throw new Error('Wallet information not found');
+      }
+
+      const parsedInfo = JSON.parse(publicInfo);
+      const decryptedWallet = JSON.parse(atob(encryptedWallet));
+      
+      // Setup connection to NEAR
+      const connectionConfig = {
+        networkId: "testnet",
+        keyStore: new keyStores.InMemoryKeyStore(),
+        nodeUrl: "https://rpc.testnet.near.org",
+      };
+
+      // Connect to NEAR
+      const near = await connect(connectionConfig);
+      
+      // Create keyPair from private key
+      const keyPair = nearAPI.utils.KeyPair.fromString(decryptedWallet.data.secretKey);
+      await connectionConfig.keyStore.setKey("testnet", parsedInfo.accountId, keyPair);
+
+      // Get account object
+      const account = await near.account(parsedInfo.accountId);
+
+      // Convert NEAR amount to yoctoNEAR
+      const yoctoAmount = nearAPI.utils.format.parseNearAmount(amount);
+
+      // Send transaction
+      const result = await account.sendMoney(
+        recipientAddress, // receiver account
+        yoctoAmount // amount in yoctoNEAR
+      );
+
+      // Get transaction hash
+      const txHash = result.transaction.hash;
+      setTxHash(txHash);
+      
+      // Set success state
       setIsSuccess(true);
-      
-      // Remove the auto-redirect timeout
-      // setTimeout(() => {
-      //   router.push('/dashboard');
-      // }, 3000);
+
     } catch (err) {
-      setError(err.message);
+      console.error('Transaction error:', err);
+      setError(err.message || 'Failed to send transaction');
     }
+  };
+
+  const getExplorerUrl = (hash) => {
+    return `https://testnet.nearblocks.io/txns/${hash}`;
   };
 
   if (isSuccess) {
@@ -56,7 +98,7 @@ export default function Send() {
             loop={false}
           />
         </div>
-        <Card className="max-w-md w-full">
+        <Card className="max-w-2xl w-full">
           <CardBody className="p-8 text-center">
             <h2 className="text-2xl font-bold text-success mb-2">
               Transaction Successful!
@@ -73,6 +115,19 @@ export default function Send() {
                 <span className="text-gray-500">To:</span>{' '}
                 <span className="font-medium">{recipientAddress}</span>
               </p>
+              <p className="text-sm flex items-center justify-center gap-2">
+                <span className="text-gray-500">Transaction Hash:</span>{' '}
+                <span className="font-medium">{txHash}</span>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onClick={() => window.open(getExplorerUrl(txHash), '_blank')}
+                  className="min-w-unit-8 w-8 h-8"
+                >
+                  <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                </Button>
+              </p>
             </div>
             
             {/* Action Buttons */}
@@ -84,6 +139,7 @@ export default function Send() {
                   setIsSuccess(false);
                   setAmount('');
                   setRecipientAddress('');
+                  setTxHash('');
                 }}
                 className="w-full"
               >
@@ -161,9 +217,8 @@ export default function Send() {
             {/* Recipient Address */}
             <Input
               isRequired
-              label="Recipient Address"
+              label="Enter wallet address"
               name="recipientAddress"
-              placeholder="Enter wallet address"
               value={recipientAddress}
               onChange={(e) => setRecipientAddress(e.target.value)}
               variant="bordered"
@@ -175,19 +230,14 @@ export default function Send() {
             <Input
               isRequired
               type="text"
-              label="Amount"
+              label={`Enter amount in ${selectedCoin.name}`}
               name="amount"
-              placeholder={`Enter amount in ${selectedCoin.name}`}
               value={amount}
               onChange={handleAmountChange}
               variant="bordered"
               errorMessage={!amount && "Please enter amount"}
               className="w-full"
-              startContent={
-                <div className="pointer-events-none flex items-center">
-                  <span className="text-default-400 text-small">{selectedCoin.icon}</span>
-                </div>
-              }
+            
             />
 
             {error && (
