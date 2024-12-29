@@ -127,7 +127,7 @@ export default function Send() {
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onClick={() => window.open(getExplorerUrl(txHash), '_blank')}
+                  onPress={() => window.open(getExplorerUrl(txHash), '_blank')}
                   className="min-w-unit-8 w-8 h-8"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
@@ -140,7 +140,7 @@ export default function Send() {
               <Button
                 color="primary"
                 variant="flat"
-                onClick={() => {
+                onPress={() => {
                   setIsSuccess(false);
                   setAmount('');
                   setRecipientAddress('');
@@ -153,7 +153,7 @@ export default function Send() {
               <Button
                 color="default"
                 variant="light"
-                onClick={() => router.push('/dashboard')}
+                onPress={() => router.push('/dashboard')}
                 className="w-full"
               >
                 Back to Dashboard
@@ -204,7 +204,7 @@ export default function Send() {
               <Button
                 color="primary"
                 variant="flat"
-                onClick={() => {
+                onPress={() => {
                   setIsError(false);
                   setErrorMessage('');
                 }}
@@ -215,7 +215,7 @@ export default function Send() {
               <Button
                 color="default"
                 variant="light"
-                onClick={() => router.push('/dashboard')}
+                onPress={() => router.push('/dashboard')}
                 className="w-full"
               >
                 Back to Dashboard
@@ -236,7 +236,7 @@ export default function Send() {
             <Button
               isIconOnly
               variant="light"
-              onClick={() => router.push('/dashboard')}
+              onPress={() => router.push('/dashboard')}
               className="mr-4"
             >
               <ArrowLeftIcon className="h-5 w-5" />

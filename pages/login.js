@@ -179,7 +179,7 @@ export default function Login() {
                     Account: <span className="font-mono font-medium">{loggedInAccount}</span>
                   </div>
                   <Button
-                    onClick={() => router.push('/transfer')}
+                    onPress={() => router.push('/transfer')}
                     color="primary"
                     className="w-full"
                   >
@@ -255,7 +255,7 @@ export default function Login() {
               </Tabs>
 
               <Button
-                onClick={handleLogin}
+                onPress={handleLogin}
                 isDisabled={loading}
                 color="primary"
                 className="w-full"

@@ -90,7 +90,7 @@ export default function Dashboard() {
           <Button
             isIconOnly
             variant="light"
-            onClick={() => router.push('/settings')}
+            onPress={() => router.push('/settings')}
           >
             <Cog8ToothIcon className="h-6 w-6" />
           </Button>
@@ -107,7 +107,7 @@ export default function Dashboard() {
                 <div className="font-mono">{walletInfo?.accountId}</div>
                 <Tooltip content={copied ? "Copied!" : "Copy to clipboard"}>
                   <button
-                    onClick={() => handleCopy(walletInfo?.accountId)}
+                    onPress={() => handleCopy(walletInfo?.accountId)}
                     className="text-black opacity-80 hover:opacity-100"
                   >
                     {copied ? (
@@ -128,7 +128,7 @@ export default function Dashboard() {
             size="lg"
             color="primary"
             startContent={<ArrowUpIcon className="h-5 w-5" />}
-            onClick={() => router.push('/send')}
+            onPress={() => router.push('/send')}
             className="h-20"
           >
             <div className="flex flex-col items-start">
@@ -141,7 +141,7 @@ export default function Dashboard() {
             size="lg"
             color="secondary"
             startContent={<ArrowDownIcon className="h-5 w-5" />}
-            onClick={() => router.push('/receive')}
+            onPress={() => router.push('/receive')}
             className="h-20"
           >
             <div className="flex flex-col items-start">

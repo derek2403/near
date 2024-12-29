@@ -226,7 +226,7 @@ export default function CreateWallet() {
               )}
 
               <Button
-                onClick={generateWallet}
+                onPress={generateWallet}
                 isDisabled={loading || !isAvailable || !accountId}
                 color="primary"
                 className="w-full"

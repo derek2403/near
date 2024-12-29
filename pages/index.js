@@ -48,7 +48,7 @@ export default function Home() {
             <p className="text-gray-600 mb-6">To get started, create your first NEAR wallet.</p>
             
             <Button
-              onClick={() => router.push('/createWallet')}
+              onPress={() => router.push('/createWallet')}
               color="primary"
               className="w-full"
               size="lg"
@@ -60,7 +60,7 @@ export default function Home() {
               <p className="text-sm text-gray-600">
                 Already have a wallet?{' '}
                 <Button
-                  onClick={() => router.push('/login')}
+                  onPress={() => router.push('/login')}
                   variant="light"
                   color="primary"
                   className="p-0"
@@ -122,7 +122,7 @@ export default function Home() {
             </div>
 
             <Button
-              onClick={() => router.push('/login')}
+              onPress={() => router.push('/login')}
               variant="bordered"
               color="primary"
               className="w-full"
@@ -132,7 +132,7 @@ export default function Home() {
             </Button>
 
             <Button
-              onClick={() => router.push('/createWallet')}
+              onPress={() => router.push('/createWallet')}
               variant="light"
               color="primary"
               className="w-full"

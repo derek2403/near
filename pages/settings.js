@@ -63,7 +63,7 @@ export default function Settings() {
             <Button
               isIconOnly
               variant="light"
-              onClick={() => router.push('/dashboard')}
+              onPress={() => router.push('/dashboard')}
               className="mr-4"
             >
               <ArrowLeftIcon className="h-5 w-5" />
@@ -79,7 +79,7 @@ export default function Settings() {
                 <Button
                   color="primary"
                   variant="light"
-                  onClick={() => setShowPrivateInfo(!showPrivateInfo)}
+                  onPress={() => setShowPrivateInfo(!showPrivateInfo)}
                   startContent={showPrivateInfo ? <EyeSlashIcon className="h-5 w-5"/> : <EyeIcon className="h-5 w-5"/>}
                 >
                   {showPrivateInfo ? 'Hide' : 'Show'} Private Info
@@ -129,7 +129,7 @@ export default function Settings() {
                   color="danger"
                   variant="flat"
                   className="w-full"
-                  onClick={handleLogout}
+                  onPress={handleLogout}
                 >
                   Logout
                 </Button>
