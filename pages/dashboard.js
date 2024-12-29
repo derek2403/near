@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { Card, CardBody, Button, Tooltip } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
+import { coins } from '../data/coins.json';
 
 const { connect, keyStores, providers } = nearAPI;
 
@@ -13,6 +14,8 @@ export default function Dashboard() {
   const [yoctoBalance, setYoctoBalance] = useState("0");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [isLoadingTxns, setIsLoadingTxns] = useState(true);
 
   useEffect(() => {
     const fetchWalletInfo = async () => {
@@ -52,6 +55,9 @@ export default function Dashboard() {
         setBalance(formattedBalance);
         console.log('Balance in NEAR:', formattedBalance);
 
+        // Fetch recent transactions
+        await fetchRecentTransactions(parsedInfo.accountId);
+
       } catch (err) {
         setError('Error loading wallet information');
         console.error('Wallet loading error:', err);
@@ -60,6 +66,74 @@ export default function Dashboard() {
 
     fetchWalletInfo();
   }, []);
+
+  const fetchRecentTransactions = async (accountId) => {
+    try {
+      setIsLoadingTxns(true);
+      const response = await fetch(`/api/getTransactionHistory?accountId=${accountId}`);
+      const data = await response.json();
+      
+      console.log('Raw transaction data:', JSON.stringify(data, null, 2));
+      
+      if (data && data.txns) {
+        // Create a Map to store unique transactions by hash
+        const uniqueTxns = new Map();
+        
+        data.txns.forEach(tx => {
+          // Only add if we haven't seen this transaction hash before
+          if (!uniqueTxns.has(tx.transaction_hash)) {
+            uniqueTxns.set(tx.transaction_hash, {
+              transaction_hash: tx.transaction_hash,
+              signer_account_id: tx.signer_account_id,
+              receiver_account_id: tx.receiver_account_id,
+              block_timestamp: tx.block_timestamp,
+              deposit: tx.actions[0]?.['Transfer']?.deposit || "0",
+              status: tx.status
+            });
+          }
+        });
+        
+        // Convert Map values back to array
+        const formattedTxns = Array.from(uniqueTxns.values());
+        console.log('Formatted unique transactions:', JSON.stringify(formattedTxns, null, 2));
+        
+        setTransactions(formattedTxns);
+      }
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+    } finally {
+      setIsLoadingTxns(false);
+    }
+  };
+
+  const formatDate = (timestamp) => {
+    // Convert NEAR timestamp (nanoseconds) to milliseconds
+    const date = new Date(timestamp / 1000000);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getTransactionType = (tx, accountId) => {
+    if (tx.signer_account_id === accountId) {
+      return 'Sent';
+    }
+    return 'Received';
+  };
+
+  const getTransactionAmount = (tx) => {
+    try {
+      if (!tx.deposit) return "0";
+      const amount = nearAPI.utils.format.formatNearAmount(tx.deposit);
+      return Number(amount).toFixed(2);
+    } catch {
+      return "0";
+    }
+  };
 
   const handleCopy = async (text) => {
     try {
@@ -155,9 +229,58 @@ export default function Dashboard() {
         <Card>
           <CardBody className="p-6">
             <h2 className="text-lg font-semibold mb-4">Recent Transactions</h2>
-            <div className="text-center text-gray-500 py-8">
-              No recent transactions
-            </div>
+            {isLoadingTxns ? (
+              <div className="text-center text-gray-500 py-8">
+                Loading transactions...
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                No recent transactions
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {transactions.map((tx) => (
+                  <div
+                    key={tx.transaction_hash}
+                    className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`p-2 rounded-full ${
+                        getTransactionType(tx, walletInfo?.accountId) === 'Sent' 
+                          ? 'bg-danger-100 text-danger-500'
+                          : 'bg-success-100 text-success-500'
+                      }`}>
+                        {getTransactionType(tx, walletInfo?.accountId) === 'Sent' 
+                          ? <ArrowUpIcon className="h-5 w-5" />
+                          : <ArrowDownIcon className="h-5 w-5" />
+                        }
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {getTransactionType(tx, walletInfo?.accountId)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {formatDate(tx.block_timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">
+                        {getTransactionType(tx, walletInfo?.accountId) === 'Sent' ? '-' : '+'}{getTransactionAmount(tx)} NEAR
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="light"
+                        className="text-sm text-default-400"
+                        onPress={() => window.open(`https://testnet.nearblocks.io/txns/${tx.transaction_hash}`, '_blank')}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardBody>
         </Card>
       </div>
