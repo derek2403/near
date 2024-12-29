@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Card, CardBody, Button, Tooltip } from "@nextui-org/react";
+import { Card, CardBody, Button, Tooltip, Switch } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { coins } from '../data/coins.json';
@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [isLoadingTxns, setIsLoadingTxns] = useState(true);
+  const [isVertical, setIsVertical] = useState(true);
 
   useEffect(() => {
     const fetchWalletInfo = async () => {
@@ -163,13 +164,27 @@ export default function Dashboard() {
         {/* Header with Settings Button */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Wallet Dashboard</h1>
-          <Button
-            isIconOnly
-            variant="light"
-            onPress={() => router.push('/settings')}
-          >
-            <Cog8ToothIcon className="h-6 w-6" />
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="w-[180px]">
+              <Switch 
+                size="sm"
+                isSelected={isVertical} 
+                onValueChange={setIsVertical}
+                className="flex items-center justify-between"
+              >
+                <span className="w-[120px] text-right">
+                  {isVertical ? "NEAR Native" : "Chain Abstraction"}
+                </span>
+              </Switch>
+            </div>
+            <Button
+              isIconOnly
+              variant="light"
+              onPress={() => router.push('/settings')}
+            >
+              <Cog8ToothIcon className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
 
         {/* Main Balance Card */}
