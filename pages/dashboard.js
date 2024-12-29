@@ -87,8 +87,8 @@ export default function Dashboard() {
               signer_account_id: tx.signer_account_id,
               receiver_account_id: tx.receiver_account_id,
               block_timestamp: tx.block_timestamp,
-              deposit: tx.actions[0]?.['Transfer']?.deposit || "0",
-              status: tx.status
+              deposit: tx.actions_agg?.deposit || "0",
+              status: tx.outcomes?.status
             });
           }
         });
@@ -129,7 +129,9 @@ export default function Dashboard() {
     try {
       if (!tx.deposit) return "0";
       const amount = nearAPI.utils.format.formatNearAmount(tx.deposit);
-      return Number(amount).toFixed(2);
+      // Add minus sign if the user is the sender
+      const sign = tx.signer_account_id === walletInfo?.accountId ? '-' : '+';
+      return `${sign}${Number(amount).toFixed(2)}`;
     } catch {
       return "0";
     }
@@ -266,7 +268,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-right">
                       <p className="font-medium">
-                        {getTransactionType(tx, walletInfo?.accountId) === 'Sent' ? '-' : '+'}{getTransactionAmount(tx)} NEAR
+                        {getTransactionAmount(tx)} NEAR
                       </p>
                       <Button
                         size="sm"

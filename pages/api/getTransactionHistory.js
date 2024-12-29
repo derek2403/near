@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://api-testnet.nearblocks.io/v1/account/${accountId}/txns?page=1&per_page=5&order=desc`,
+      `https://api-testnet.nearblocks.io/v1/account/${accountId}/txns-only?per_page=25&order=desc`,
       {
         headers: {
           'Accept': '*/*',
