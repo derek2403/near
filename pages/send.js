@@ -1,15 +1,82 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { Card, CardBody, Button, Input, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Form } from "@nextui-org/react";
+import { 
+  Card, 
+  CardBody, 
+  Button, 
+  Input, 
+  Modal, 
+  ModalContent, 
+  ModalHeader, 
+  ModalBody, 
+  useDisclosure,
+  Autocomplete,
+  AutocompleteItem,
+  Spinner 
+} from "@nextui-org/react";
 import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 const { connect, keyStores } = nearAPI;
 
+// Available coins data
+const coins = [
+  { 
+    label: "NEAR", 
+    key: "near", 
+    icon: "https://cryptologos.cc/logos/near-protocol-near-logo.png",
+    symbol: "NEAR",
+    description: "NEAR Protocol Native Token" 
+  },
+  { 
+    label: "USD Coin", 
+    key: "usdc", 
+    icon: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
+    symbol: "USDC",
+    description: "USD Coin on NEAR" 
+  },
+  { 
+    label: "Tether USD", 
+    key: "usdt", 
+    icon: "https://cryptologos.cc/logos/tether-usdt-logo.png",
+    symbol: "USDT",
+    description: "Tether USD on NEAR" 
+  },
+  { 
+    label: "Ethereum", 
+    key: "eth", 
+    icon: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+    symbol: "ETH",
+    description: "Wrapped Ethereum on NEAR" 
+  },
+  { 
+    label: "Optimism", 
+    key: "op", 
+    icon: "https://cryptologos.cc/logos/optimism-ethereum-op-logo.png",
+    symbol: "OP",
+    description: "Optimism Token on NEAR" 
+  },
+  { 
+    label: "Arbitrum", 
+    key: "arb", 
+    icon: "https://cryptologos.cc/logos/arbitrum-arb-logo.png",
+    symbol: "ARB",
+    description: "Arbitrum Token on NEAR" 
+  },
+  { 
+    label: "Polygon", 
+    key: "matic", 
+    icon: "https://cryptologos.cc/logos/polygon-matic-logo.png",
+    symbol: "MATIC",
+    description: "Polygon Token on NEAR" 
+  }
+];
+
 export default function Send() {
   const router = useRouter();
-  const [selectedCoin, setSelectedCoin] = useState({ name: 'NEAR', icon: '₦' });
+  const {isOpen, onOpen, onOpenChange} = useDisclosure();
+  const [selectedCoin, setSelectedCoin] = useState(coins[0]);
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [error, setError] = useState(null);
@@ -17,12 +84,7 @@ export default function Send() {
   const [txHash, setTxHash] = useState('');
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-
-  // Available coins (can be expanded)
-  const coins = [
-    { name: 'NEAR', icon: '₦' },
-    { name: 'USDC', icon: '$' },
-  ];
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
@@ -36,6 +98,7 @@ export default function Send() {
     setError(null);
     setIsError(false);
     setErrorMessage('');
+    setIsLoading(true);
     
     try {
       // Get sender's wallet info from localStorage
@@ -86,6 +149,8 @@ export default function Send() {
       console.error('Transaction error:', err);
       setErrorMessage(err.message || 'Failed to send transaction');
       setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -114,7 +179,7 @@ export default function Send() {
             <div className="space-y-2 mb-6">
               <p className="text-sm">
                 <span className="text-gray-500">Amount:</span>{' '}
-                <span className="font-medium">{amount} {selectedCoin.name}</span>
+                <span className="font-medium">{amount} {selectedCoin.label}</span>
               </p>
               <p className="text-sm">
                 <span className="text-gray-500">To:</span>{' '}
@@ -186,7 +251,7 @@ export default function Send() {
             <div className="space-y-2 mb-6">
               <p className="text-sm">
                 <span className="text-gray-500">Amount:</span>{' '}
-                <span className="font-medium">{amount} {selectedCoin.name}</span>
+                <span className="font-medium">{amount} {selectedCoin.label}</span>
               </p>
               <p className="text-sm">
                 <span className="text-gray-500">To:</span>{' '}
@@ -244,67 +309,42 @@ export default function Send() {
             <h1 className="text-2xl font-bold">Send</h1>
           </div>
 
-          <Form 
-            className="space-y-6"
-            validationBehavior="native" 
-            onSubmit={onSubmit}
-          >
-            {/* Coin Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Coin
-              </label>
-              <Dropdown>
-                <DropdownTrigger>
+          <form onSubmit={onSubmit} className="space-y-6">
+            {/* Amount Input with Coin Selector */}
+            <div className="relative">
+              <Input
+                type="text"
+                size="lg"
+                label="Amount"
+                value={amount}
+                onChange={handleAmountChange}
+                className="text-3xl"
+                placeholder="0.00"
+                endContent={
                   <Button
-                    variant="bordered"
-                    className="w-full justify-start"
+                    className="min-w-fit h-12"
+                    onPress={onOpen}
+                    variant="flat"
                   >
-                    <span className="mr-2">{selectedCoin.icon}</span>
-                    {selectedCoin.name}
+                    <img 
+                      src={selectedCoin.icon} 
+                      alt={selectedCoin.label} 
+                      className="w-6 h-6 rounded-full mr-2"
+                    />
+                    <span className="font-medium">{selectedCoin.symbol}</span>
                   </Button>
-                </DropdownTrigger>
-                <DropdownMenu
-                  aria-label="Select coin"
-                  onAction={(key) => {
-                    const coin = coins.find(c => c.name === key);
-                    if (coin) setSelectedCoin(coin);
-                  }}
-                >
-                  {coins.map((coin) => (
-                    <DropdownItem key={coin.name}>
-                      <span className="mr-2">{coin.icon}</span>
-                      {coin.name}
-                    </DropdownItem>
-                  ))}
-                </DropdownMenu>
-              </Dropdown>
+                }
+              />
             </div>
 
             {/* Recipient Address */}
             <Input
               isRequired
               label="Enter wallet address"
-              name="recipientAddress"
               value={recipientAddress}
               onChange={(e) => setRecipientAddress(e.target.value)}
               variant="bordered"
-              errorMessage={!recipientAddress && "Please enter recipient address"}
               className="w-full"
-            />
-
-            {/* Amount */}
-            <Input
-              isRequired
-              type="text"
-              label={`Enter amount in ${selectedCoin.name}`}
-              name="amount"
-              value={amount}
-              onChange={handleAmountChange}
-              variant="bordered"
-              errorMessage={!amount && "Please enter amount"}
-              className="w-full"
-            
             />
 
             {error && (
@@ -319,13 +359,97 @@ export default function Send() {
               color="primary"
               className="w-full"
               size="lg"
-              isDisabled={!amount || !recipientAddress}
+              isDisabled={!amount || !recipientAddress || isLoading}
+              isLoading={isLoading}
+              spinner={<Spinner color="white" size="sm" />}
             >
-              Continue
+              {isLoading ? 'Sending...' : 'Continue'}
             </Button>
-          </Form>
+          </form>
         </CardBody>
       </Card>
+
+      {/* Coin Selection Modal */}
+      <Modal
+        backdrop="opaque"
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        classNames={{
+          backdrop: "bg-gradient-to-t from-zinc-900 to-zinc-900/10 backdrop-opacity-20",
+          base: "max-h-[80vh] max-w-md mx-auto",
+          body: "overflow-y-auto"
+        }}
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">Select Token</ModalHeader>
+              <ModalBody className="py-6">
+                <Autocomplete
+                  defaultItems={coins}
+                  placeholder="Search tokens"
+                  className="mb-6"
+                  onSelectionChange={(key) => {
+                    const selected = coins.find(coin => coin.key === key);
+                    if (selected) {
+                      setSelectedCoin(selected);
+                      onClose();
+                    }
+                  }}
+                >
+                  {(coin) => (
+                    <AutocompleteItem
+                      key={coin.key}
+                      className="p-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={coin.icon} 
+                          alt={coin.label} 
+                          className="w-8 h-8 rounded-full"
+                        />
+                        <div>
+                          <p className="font-medium">{coin.label}</p>
+                          <p className="text-sm text-default-500">{coin.symbol}</p>
+                        </div>
+                      </div>
+                    </AutocompleteItem>
+                  )}
+                </Autocomplete>
+
+                {/* Popular Tokens Section */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-gray-500">Popular tokens</h3>
+                  <div className="space-y-2">
+                    {coins.map((coin) => (
+                      <div
+                        key={coin.key}
+                        className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
+                        onClick={() => {
+                          setSelectedCoin(coin);
+                          onClose();
+                        }}
+                      >
+                        <img 
+                          src={coin.icon} 
+                          alt={coin.label} 
+                          className="w-8 h-8 rounded-full"
+                        />
+                        <div className="flex-grow">
+                          <p className="font-medium">{coin.label}</p>
+                          <p className="text-sm text-default-500">{coin.symbol}</p>
+                        </div>
+                        <p className="text-sm text-default-500 hidden sm:block">{coin.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </ModalBody>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
