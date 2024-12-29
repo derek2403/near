@@ -17,61 +17,9 @@ import {
 import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { coins } from '../data/coins.json';
 
 const { connect, keyStores } = nearAPI;
-
-// Available coins data
-const coins = [
-  { 
-    label: "NEAR", 
-    key: "near", 
-    icon: "https://cryptologos.cc/logos/near-protocol-near-logo.png",
-    symbol: "NEAR",
-    description: "NEAR Protocol Native Token" 
-  },
-  { 
-    label: "USD Coin", 
-    key: "usdc", 
-    icon: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
-    symbol: "USDC",
-    description: "USD Coin on NEAR" 
-  },
-  { 
-    label: "Tether USD", 
-    key: "usdt", 
-    icon: "https://cryptologos.cc/logos/tether-usdt-logo.png",
-    symbol: "USDT",
-    description: "Tether USD on NEAR" 
-  },
-  { 
-    label: "Ethereum", 
-    key: "eth", 
-    icon: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
-    symbol: "ETH",
-    description: "Wrapped Ethereum on NEAR" 
-  },
-  { 
-    label: "Optimism", 
-    key: "op", 
-    icon: "https://cryptologos.cc/logos/optimism-ethereum-op-logo.png",
-    symbol: "OP",
-    description: "Optimism Token on NEAR" 
-  },
-  { 
-    label: "Arbitrum", 
-    key: "arb", 
-    icon: "https://cryptologos.cc/logos/arbitrum-arb-logo.png",
-    symbol: "ARB",
-    description: "Arbitrum Token on NEAR" 
-  },
-  { 
-    label: "Polygon", 
-    key: "matic", 
-    icon: "https://cryptologos.cc/logos/polygon-matic-logo.png",
-    symbol: "MATIC",
-    description: "Polygon Token on NEAR" 
-  }
-];
 
 export default function Send() {
   const router = useRouter();
@@ -313,25 +261,30 @@ export default function Send() {
             {/* Amount Input with Coin Selector */}
             <div className="relative">
               <Input
+              isRequired
                 type="text"
                 size="lg"
                 label="Amount"
                 value={amount}
                 onChange={handleAmountChange}
                 className="text-3xl"
-                placeholder="0.00"
                 endContent={
                   <Button
-                    className="min-w-fit h-12"
-                    onPress={onOpen}
-                    variant="flat"
-                  >
-                    <img 
-                      src={selectedCoin.icon} 
-                      alt={selectedCoin.label} 
-                      className="w-6 h-6 rounded-full mr-2"
-                    />
-                    <span className="font-medium">{selectedCoin.symbol}</span>
+                  className="min-w-fit h-full" // Changed to h-full to match input height
+                  onPress={onOpen}
+                  variant="flat"
+                >
+                    <div className="flex items-center gap-2">
+                      <img 
+                        src={selectedCoin.icon} 
+                        alt={selectedCoin.label} 
+                        className="w-8 h-8 rounded-full"
+                      />
+                      <div>
+                        <p className="font-medium">{selectedCoin.label}</p>
+                        <p className="text-sm text-default-500">{selectedCoin.symbol}</p>
+                      </div>
+                    </div>
                   </Button>
                 }
               />
@@ -374,11 +327,6 @@ export default function Send() {
         backdrop="opaque"
         isOpen={isOpen}
         onOpenChange={onOpenChange}
-        classNames={{
-          backdrop: "bg-gradient-to-t from-zinc-900 to-zinc-900/10 backdrop-opacity-20",
-          base: "max-h-[80vh] max-w-md mx-auto",
-          body: "overflow-y-auto"
-        }}
         scrollBehavior="inside"
       >
         <ModalContent>
