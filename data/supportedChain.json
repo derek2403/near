@@ -1,12 +1,40 @@
 {
   "chains": [
     {
-      "name": "Optimism Sepolia",
-      "chainId": 11155420,
-      "rpcUrl": "https://opt-sepolia.g.alchemy.com/v2/6U7t79S89NhHIspqDQ7oKGRWp5ZOfsNj",
+      "name": "Ethereum",
+      "prefix": "ethereum",
+      "chainId": 11155111,
+      "rpcUrl": "https://eth-sepolia.g.alchemy.com/v2/2iPF_MT9jp-O4mQ0eWd1HpeamV3zWWt4",
       "symbol": "ETH",
-      "explorer": "https://sepolia-optimism.etherscan.io",
-      "aliases": ["opt", "optimism"]
+      "logo": "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+      "explorerUrl": "https://sepolia.etherscan.io/address/"
+    },
+    {
+      "name": "Polygon",
+      "prefix": "polygon",
+      "chainId": 80002,
+      "rpcUrl": "https://rpc-amoy.polygon.technology/",
+      "symbol": "MATIC",
+      "logo": "https://cryptologos.cc/logos/polygon-matic-logo.png",
+      "explorerUrl": "https://amoy.polygonscan.com/"
+    },
+    {
+      "name": "Optimism",
+      "prefix": "optimism",
+      "chainId": 11155420,
+      "rpcUrl": "https://sepolia.optimism.io",
+      "symbol": "ETH",
+      "logo": "https://cryptologos.cc/logos/optimism-ethereum-op-logo.png",
+      "explorerUrl": "https://sepolia-optimism.etherscan.io/address/"
+    },
+    {
+      "name": "Arbitrum",
+      "prefix": "arbitrum",
+      "chainId": 421614,
+      "rpcUrl": "https://sepolia-rollup.arbitrum.io/rpc",
+      "symbol": "ETH",
+      "logo": "https://cryptologos.cc/logos/arbitrum-arb-logo.png",
+      "explorerUrl": "https://sepolia.arbiscan.io/address/"
     }
   ]
 }
