@@ -1,4 +1,4 @@
-import { Card, CardBody, Button, Tooltip } from "@nextui-org/react";
+import { Card, CardBody, Button, Tooltip, Pagination } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 
 export default function NativeNearDashboard({ 
@@ -11,7 +11,8 @@ export default function NativeNearDashboard({
   formatDate,
   getTransactionType,
   getTransactionAmount,
-  router
+  router,
+  pagination
 }) {
   return (
     <>
@@ -70,60 +71,71 @@ export default function NativeNearDashboard({
         </Button>
       </div>
 
-      {/* Recent Transactions Card */}
+      {/* Transactions Card */}
       <Card>
-        <CardBody className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Recent Transactions</h2>
+        <CardBody>
+          <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
+          
           {isLoadingTxns ? (
-            <div className="text-center text-gray-500 py-8">
-              Loading transactions...
-            </div>
+            <div className="text-center py-4">Loading transactions...</div>
           ) : transactions.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              No recent transactions
-            </div>
+            <div className="text-center py-4">No transactions found</div>
           ) : (
             <div className="space-y-4">
-              {transactions.map((tx) => (
-                <div
-                  key={tx.transaction_hash}
-                  className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2 rounded-full ${
-                      getTransactionType(tx, walletInfo?.accountId) === 'Sent' 
-                        ? 'bg-danger-100 text-danger-500'
-                        : 'bg-success-100 text-success-500'
-                    }`}>
-                      {getTransactionType(tx, walletInfo?.accountId) === 'Sent' 
-                        ? <ArrowUpIcon className="h-5 w-5" />
-                        : <ArrowDownIcon className="h-5 w-5" />
-                      }
+              {/* Transaction list */}
+              <div className="space-y-3">
+                {transactions.map((tx) => (
+                  <div
+                    key={tx.transaction_hash}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full ${
+                        getTransactionType(tx, walletInfo.accountId) === 'Sent' 
+                          ? 'bg-pink-100' 
+                          : 'bg-green-100'
+                      }`}>
+                        {getTransactionType(tx, walletInfo.accountId) === 'Sent' 
+                          ? <ArrowUpIcon className="h-5 w-5 text-pink-500" />
+                          : <ArrowDownIcon className="h-5 w-5 text-green-500" />
+                        }
+                      </div>
+                      <div>
+                        <div className="font-medium">
+                          {getTransactionType(tx, walletInfo.accountId)}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {formatDate(tx.block_timestamp)}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">
-                        {getTransactionType(tx, walletInfo?.accountId)}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {formatDate(tx.block_timestamp)}
-                      </p>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {getTransactionAmount(tx)} NEAR
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        <Button
+                          size="sm"
+                          variant="light"
+                          onPress={() => window.open(`https://explorer.testnet.near.org/transactions/${tx.transaction_hash}`, '_blank')}
+                        >
+                          View
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      {getTransactionAmount(tx)} NEAR
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="light"
-                      className="text-sm text-default-400"
-                      onPress={() => window.open(`https://testnet.nearblocks.io/txns/${tx.transaction_hash}`, '_blank')}
-                    >
-                      View
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* Pagination */}
+              <div className="flex justify-center mt-4">
+                <Pagination
+                  total={pagination.totalPages}
+                  page={pagination.currentPage}
+                  onChange={pagination.onPageChange}
+                  showControls
+                />
+              </div>
             </div>
           )}
         </CardBody>

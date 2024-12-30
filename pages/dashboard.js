@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Card, CardBody, Button, Tooltip, Switch } from "@nextui-org/react";
+import { Card, CardBody, Button, Tooltip, Switch, Pagination } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { coins } from '../data/coins.json';
@@ -19,6 +19,9 @@ export default function Dashboard() {
   const [transactions, setTransactions] = useState([]);
   const [isLoadingTxns, setIsLoadingTxns] = useState(true);
   const [isVertical, setIsVertical] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 5;
 
   useEffect(() => {
     const fetchWalletInfo = async () => {
@@ -73,17 +76,15 @@ export default function Dashboard() {
   const fetchRecentTransactions = async (accountId) => {
     try {
       setIsLoadingTxns(true);
-      const response = await fetch(`/api/getTransactionHistory?accountId=${accountId}`);
+      const response = await fetch(
+        `https://api-testnet.nearblocks.io/v1/account/${accountId}/txns-only?per_page=25&order=desc`
+      );
       const data = await response.json();
       
-      console.log('Raw transaction data:', JSON.stringify(data, null, 2));
-      
       if (data && data.txns) {
-        // Create a Map to store unique transactions by hash
         const uniqueTxns = new Map();
         
         data.txns.forEach(tx => {
-          // Only add if we haven't seen this transaction hash before
           if (!uniqueTxns.has(tx.transaction_hash)) {
             uniqueTxns.set(tx.transaction_hash, {
               transaction_hash: tx.transaction_hash,
@@ -96,17 +97,21 @@ export default function Dashboard() {
           }
         });
         
-        // Convert Map values back to array
         const formattedTxns = Array.from(uniqueTxns.values());
-        console.log('Formatted unique transactions:', JSON.stringify(formattedTxns, null, 2));
-        
         setTransactions(formattedTxns);
+        setTotalPages(Math.ceil(formattedTxns.length / ITEMS_PER_PAGE));
       }
     } catch (err) {
       console.error('Error fetching transactions:', err);
     } finally {
       setIsLoadingTxns(false);
     }
+  };
+
+  const getPaginatedTransactions = () => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return transactions.slice(startIndex, endIndex);
   };
 
   const formatDate = (timestamp) => {
@@ -154,14 +159,19 @@ export default function Dashboard() {
     const props = {
       balance,
       walletInfo,
-      transactions,
+      transactions: getPaginatedTransactions(),
       isLoadingTxns,
       copied,
       handleCopy,
       formatDate,
       getTransactionType,
       getTransactionAmount,
-      router
+      router,
+      pagination: {
+        currentPage,
+        totalPages,
+        onPageChange: setCurrentPage
+      }
     };
 
     return isVertical ? 
