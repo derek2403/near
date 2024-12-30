@@ -135,9 +135,7 @@ export default function ChainAbstractionDashboard({
                 <div className="flex items-center space-x-2">
                   <TokenIcon />
                   <span>Tokens</span>
-                  <Chip size="sm" variant="faded">
-                    1
-                  </Chip>
+                 
                 </div>
               }
             >
@@ -165,9 +163,7 @@ export default function ChainAbstractionDashboard({
                 <div className="flex items-center space-x-2">
                   <ActivityIcon />
                   <span>Recent Transactions</span>
-                  <Chip size="sm" variant="faded">
-                    {transactions.length}
-                  </Chip>
+                 
                 </div>
               }
             >

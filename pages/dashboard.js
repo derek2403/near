@@ -1,11 +1,48 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Card, CardBody, Button, Tooltip, Switch, Pagination } from "@nextui-org/react";
+import { Card, CardBody, Button, Tooltip, Tabs, Tab } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { coins } from '../data/coins.json';
 import NativeNearDashboard from '../components/NativeNearDashboard';
 import ChainAbstractionDashboard from '../components/ChainAbstractionDashboard';
+
+// NEAR icon component
+const NearIcon = (props) => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path
+      d="M15.2 2H8.8C5.2 2 3 4.2 3 7.8V16.2C3 19.8 5.2 22 8.8 22H15.2C18.8 22 21 19.8 21 16.2V7.8C21 4.2 18.8 2 15.2 2Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+// Chain Abstraction icon component
+const ChainIcon = (props) => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path
+      d="M12.0001 7.89001L10.9301 9.75001C10.6901 10.15 10.8901 10.65 11.3501 10.75L12.6501 11.05C13.1101 11.15 13.3101 11.65 13.0701 12.05L12.0001 13.91L13.0701 15.77C13.3101 16.17 13.1101 16.67 12.6501 16.77L11.3501 17.07C10.8901 17.17 10.6901 17.67 10.9301 18.07L12.0001 19.93"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 const { connect, keyStores, providers } = nearAPI;
 
@@ -192,33 +229,52 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen p-8 bg-gray-50">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header with Settings Button */}
+        {/* Header with Tabs and Settings Button */}
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Wallet Dashboard</h1>
-          <div className="flex items-center gap-4">
-            <div className="w-[180px]">
-              <Switch 
-                size="sm"
-                isSelected={isVertical} 
-                onValueChange={setIsVertical}
-                className="flex items-center justify-between"
-              >
-                <span className="w-[120px] text-right">
-                  {isVertical ? "NEAR Native" : "Chain Abstraction"}
-                </span>
-              </Switch>
-            </div>
-            <Button
-              isIconOnly
-              variant="light"
-              onPress={() => router.push('/settings')}
+          <div className="flex items-center gap-6">
+            <h1 className="text-2xl font-bold">Wallet Dashboard</h1>
+            <Tabs 
+              aria-label="Wallet Mode" 
+              selectedKey={isVertical ? "near" : "chain"}
+              onSelectionChange={(key) => setIsVertical(key === "near")}
+              variant="bordered"
+              classNames={{
+                tabList: "gap-4",
+                cursor: "w-full bg-primary",
+                tab: "h-8 px-3",
+                tabContent: "group-data-[selected=true]:text-white"
+              }}
             >
-              <Cog8ToothIcon className="h-6 w-6" />
-            </Button>
+              <Tab
+                key="near"
+                title={
+                  <div className="flex items-center space-x-2">
+                    <NearIcon className="w-4 h-4" />
+                    <span className="text-sm">Native NEAR</span>
+                  </div>
+                }
+              />
+              <Tab
+                key="chain"
+                title={
+                  <div className="flex items-center space-x-2">
+                    <ChainIcon className="w-4 h-4" />
+                    <span className="text-sm">Chain Abstraction</span>
+                  </div>
+                }
+              />
+            </Tabs>
           </div>
+          <Button
+            isIconOnly
+            variant="light"
+            onPress={() => router.push('/settings')}
+          >
+            <Cog8ToothIcon className="h-6 w-6" />
+          </Button>
         </div>
 
-        {/* Render appropriate dashboard based on toggle */}
+        {/* Render appropriate dashboard based on tab selection */}
         {renderDashboard()}
       </div>
     </div>
