@@ -1,7 +1,10 @@
-import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab, Chip } from "@nextui-org/react";
+import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab, Image } from "@nextui-org/react";
 import { TokenIcon } from '../public/icons/TokenIcon';
 import { ActivityIcon } from '../public/icons/ActivityIcon';
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react';
+import { setupAdapter } from 'near-ca';
+import { ethers } from 'ethers';
 
 export default function ChainSignatureDashboard({ 
   balance, 
@@ -16,16 +19,97 @@ export default function ChainSignatureDashboard({
   router,
   pagination
 }) {
+  const [derivedAddresses, setDerivedAddresses] = useState({});
+  const [isDerivingAddress, setIsDerivingAddress] = useState(true);
+  const [derivationError, setDerivationError] = useState('');
+
+  useEffect(() => {
+    const deriveOptimismAddress = async () => {
+      try {
+        setIsDerivingAddress(true);
+        setDerivationError('');
+
+        // Use index 1 for the first address
+        const derivationPath = `optimism,1`;
+        const adapter = await setupAdapter({
+          accountId: walletInfo?.accountId,
+          mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
+          derivationPath: derivationPath,
+        });
+
+        // Connect to Optimism Sepolia
+        const provider = new ethers.JsonRpcProvider("https://sepolia.optimism.io");
+        const balance = await provider.getBalance(adapter.address);
+
+        setDerivedAddresses({
+          optimism: {
+            address: adapter.address,
+            balance: ethers.formatEther(balance),
+            derivationPath
+          }
+        });
+
+      } catch (err) {
+        console.error('Error deriving address:', err);
+        setDerivationError('Failed to derive Optimism address');
+      } finally {
+        setIsDerivingAddress(false);
+      }
+    };
+
+    if (walletInfo?.accountId) {
+      deriveOptimismAddress();
+    }
+  }, [walletInfo]);
+
   return (
     <>
       {/* Main Balance Card */}
       <Card>
         <CardBody className="p-8">
           <div className="text-black">
-            <div className="text-sm opacity-80 mb-1">Total Balance (Chain Signature)</div>
-            <div className="text-4xl font-bold mb-4">Coming Soon</div>
-            <div className="flex items-center space-x-2">
-              <div className="text-sm opacity-80">Account ID:</div>
+            <div className="text-sm opacity-80 mb-1">Chain Signature Wallets</div>
+            
+            {isDerivingAddress ? (
+              <div className="text-center py-4">Deriving addresses...</div>
+            ) : derivationError ? (
+              <div className="text-red-500">{derivationError}</div>
+            ) : (
+              <div className="space-y-4">
+                {/* Optimism Address Card */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Image
+                      src="https://cryptologos.cc/logos/optimism-ethereum-op-logo.png"
+                      alt="Optimism"
+                      width={32}
+                      height={32}
+                    />
+                    <div>
+                      <div className="font-medium">Optimism</div>
+                      <div className="text-xs text-gray-500 font-mono">
+                        {derivedAddresses.optimism?.address}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium">
+                      {derivedAddresses.optimism?.balance || '0'} ETH
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      onPress={() => window.open(`https://sepolia-optimism.etherscan.io/address/${derivedAddresses.optimism?.address}`, '_blank')}
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center space-x-2">
+              <div className="text-sm opacity-80">NEAR Account ID:</div>
               <div className="font-mono">{walletInfo?.accountId}</div>
               <Tooltip content={copied ? "Copied!" : "Copy to clipboard"}>
                 <button
