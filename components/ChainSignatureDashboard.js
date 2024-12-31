@@ -7,6 +7,12 @@ import { setupAdapter } from 'near-ca';
 import { ethers } from 'ethers';
 import { chains } from '../data/supportedChain.json';
 
+const calculateTotalBalance = (balances) => {
+  return Object.values(balances)
+    .reduce((total, balance) => total + parseFloat(balance), 0)
+    .toFixed(4);
+};
+
 export default function ChainSignatureDashboard({ 
   balance, 
   walletInfo, 
@@ -84,8 +90,9 @@ export default function ChainSignatureDashboard({
               <div className="space-y-4">
                 {/* EVM Address Card */}
                 <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <div className="flex-1">
+                  <div className="grid grid-cols-[2fr_1fr_auto] gap-4">
+                    {/* EVM Address Section */}
+                    <div>
                       <div className="font-medium mb-2">Your EVM Address</div>
                       <div className="text-sm font-mono text-gray-600 flex items-center">
                         {evmAddress}
@@ -102,8 +109,16 @@ export default function ChainSignatureDashboard({
                       </div>
                     </div>
 
-                    {/* Chain Logos */}
-                    <div className="flex items-center gap-2">
+                    {/* Balance Section */}
+                    <div>
+                      <div className="font-medium mb-2">Total Balance</div>
+                      <div className="text-sm text-gray-600">
+                        {calculateTotalBalance(chainBalances)} ETH
+                      </div>
+                    </div>
+
+                    {/* Chain Logos Section */}
+                    <div className="flex items-start gap-2">
                       {chains.map((chain) => (
                         <Tooltip 
                           key={chain.prefix}
