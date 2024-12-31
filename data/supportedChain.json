@@ -16,7 +16,7 @@
       "rpcUrl": "https://rpc-amoy.polygon.technology/",
       "symbol": "MATIC",
       "logo": "https://cryptologos.cc/logos/polygon-matic-logo.png",
-      "explorerUrl": "https://amoy.polygonscan.com/"
+      "explorerUrl": "https://amoy.polygonscan.com/address/"
     },
     {
       "name": "Optimism",

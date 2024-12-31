@@ -5,6 +5,7 @@ import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon }
 import { useState, useEffect } from 'react';
 import { setupAdapter } from 'near-ca';
 import { ethers } from 'ethers';
+import { chains } from '../data/supportedChain.json';
 
 export default function ChainSignatureDashboard({ 
   balance, 
@@ -19,46 +20,51 @@ export default function ChainSignatureDashboard({
   router,
   pagination
 }) {
-  const [derivedAddresses, setDerivedAddresses] = useState({});
+  const [evmAddress, setEvmAddress] = useState(null);
   const [isDerivingAddress, setIsDerivingAddress] = useState(true);
   const [derivationError, setDerivationError] = useState('');
+  const [chainBalances, setChainBalances] = useState({});
 
   useEffect(() => {
-    const deriveOptimismAddress = async () => {
+    const deriveEvmAddress = async () => {
       try {
         setIsDerivingAddress(true);
         setDerivationError('');
 
-        // Use index 1 for the first address
-        const derivationPath = `optimism,1`;
+        // Derive a single EVM address that will work across all chains
+        const derivationPath = `evm,1`;
         const adapter = await setupAdapter({
           accountId: walletInfo?.accountId,
           mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
           derivationPath: derivationPath,
         });
 
-        // Connect to Optimism Sepolia
-        const provider = new ethers.JsonRpcProvider("https://sepolia.optimism.io");
-        const balance = await provider.getBalance(adapter.address);
+        setEvmAddress(adapter.address);
 
-        setDerivedAddresses({
-          optimism: {
-            address: adapter.address,
-            balance: ethers.formatEther(balance),
-            derivationPath
+        // Fetch balances from all supported chains
+        const balances = {};
+        for (const chain of chains) {
+          try {
+            const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
+            const balance = await provider.getBalance(adapter.address);
+            balances[chain.prefix] = ethers.formatEther(balance);
+          } catch (err) {
+            console.error(`Error fetching balance for ${chain.name}:`, err);
+            balances[chain.prefix] = '0';
           }
-        });
+        }
+        setChainBalances(balances);
 
       } catch (err) {
         console.error('Error deriving address:', err);
-        setDerivationError('Failed to derive Optimism address');
+        setDerivationError('Failed to derive EVM address');
       } finally {
         setIsDerivingAddress(false);
       }
     };
 
     if (walletInfo?.accountId) {
-      deriveOptimismAddress();
+      deriveEvmAddress();
     }
   }, [walletInfo]);
 
@@ -68,41 +74,52 @@ export default function ChainSignatureDashboard({
       <Card>
         <CardBody className="p-8">
           <div className="text-black">
-            <div className="text-sm opacity-80 mb-1">Chain Signature Wallets</div>
+            <div className="text-sm opacity-80 mb-1">Chain Signature Wallet</div>
             
             {isDerivingAddress ? (
-              <div className="text-center py-4">Deriving addresses...</div>
+              <div className="text-center py-4">Deriving EVM address...</div>
             ) : derivationError ? (
               <div className="text-red-500">{derivationError}</div>
             ) : (
               <div className="space-y-4">
-                {/* Optimism Address Card */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Image
-                      src="https://cryptologos.cc/logos/optimism-ethereum-op-logo.png"
-                      alt="Optimism"
-                      width={32}
-                      height={32}
-                    />
-                    <div>
-                      <div className="font-medium">Optimism</div>
-                      <div className="text-xs text-gray-500 font-mono">
-                        {derivedAddresses.optimism?.address}
+                {/* EVM Address Card */}
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div className="flex-1">
+                      <div className="font-medium mb-2">Your EVM Address</div>
+                      <div className="text-sm font-mono text-gray-600 flex items-center">
+                        {evmAddress}
+                        <button
+                          onClick={() => handleCopy(evmAddress)}
+                          className="ml-2 text-gray-500 hover:text-gray-700 inline-flex items-center"
+                        >
+                          {copied ? (
+                            <ClipboardDocumentCheckIcon className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <ClipboardIcon className="h-4 w-4" />
+                          )}
+                        </button>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium">
-                      {derivedAddresses.optimism?.balance || '0'} ETH
+
+                    {/* Chain Logos */}
+                    <div className="flex items-center gap-2">
+                      {chains.map((chain) => (
+                        <Tooltip 
+                          key={chain.prefix}
+                          content={chain.name}
+                        >
+                          <Image
+                            src={chain.logo}
+                            alt={chain.name}
+                            width={24}
+                            height={24}
+                            className="cursor-pointer transition-transform hover:scale-110"
+                            onClick={() => window.open(`${chain.explorerUrl}${evmAddress}`, '_blank')}
+                          />
+                        </Tooltip>
+                      ))}
                     </div>
-                    <Button
-                      size="sm"
-                      variant="light"
-                      onPress={() => window.open(`https://sepolia-optimism.etherscan.io/address/${derivedAddresses.optimism?.address}`, '_blank')}
-                    >
-                      View
-                    </Button>
                   </div>
                 </div>
               </div>
