@@ -5,7 +5,7 @@ import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, 
 import * as nearAPI from "near-api-js";
 import { coins } from '../data/coins.json';
 import NativeNearDashboard from '../components/NativeNearDashboard';
-import ChainAbstractionDashboard from '../components/ChainAbstractionDashboard';
+import ChainSignatureDashboard from '../components/ChainSignatureDashboard';
 import { NearIcon } from '../public/icons/NearIcon';
 import { ChainIcon } from '../public/icons/ChainIcon';
 
@@ -178,7 +178,7 @@ export default function Dashboard() {
 
     return isVertical ? 
       <NativeNearDashboard {...props} /> : 
-      <ChainAbstractionDashboard {...props} />;
+      <ChainSignatureDashboard {...props} />;
   };
 
   if (!walletInfo) {
@@ -224,7 +224,7 @@ export default function Dashboard() {
                 title={
                   <div className="flex items-center space-x-2">
                     <ChainIcon className="w-4 h-4" />
-                    <span className="text-sm">Chain Abstraction</span>
+                    <span className="text-sm">Chain Signature</span>
                   </div>
                 }
               />

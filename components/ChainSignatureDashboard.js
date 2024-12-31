@@ -3,7 +3,7 @@ import { TokenIcon } from '../public/icons/TokenIcon';
 import { ActivityIcon } from '../public/icons/ActivityIcon';
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 
-export default function ChainAbstractionDashboard({ 
+export default function ChainSignatureDashboard({ 
   balance, 
   walletInfo, 
   transactions, 
@@ -22,7 +22,7 @@ export default function ChainAbstractionDashboard({
       <Card>
         <CardBody className="p-8">
           <div className="text-black">
-            <div className="text-sm opacity-80 mb-1">Total Balance (Chain Abstraction)</div>
+            <div className="text-sm opacity-80 mb-1">Total Balance (Chain Signature)</div>
             <div className="text-4xl font-bold mb-4">Coming Soon</div>
             <div className="flex items-center space-x-2">
               <div className="text-sm opacity-80">Account ID:</div>
@@ -56,7 +56,7 @@ export default function ChainAbstractionDashboard({
         >
           <div className="flex flex-col items-start w-full">
             <span className="text-lg">Send</span>
-            <span className="text-xs opacity-80 whitespace-nowrap">Transfer via Chain Abstraction</span>
+            <span className="text-xs opacity-80 whitespace-nowrap">Transfer via Chain Signature</span>
           </div>
         </Button>
 
@@ -70,7 +70,7 @@ export default function ChainAbstractionDashboard({
         >
           <div className="flex flex-col items-start w-full">
             <span className="text-lg">Receive</span>
-            <span className="text-xs opacity-80 whitespace-nowrap">Receive via Chain Abstraction</span>
+            <span className="text-xs opacity-80 whitespace-nowrap">Receive via Chain Signature</span>
           </div>
         </Button>
       </div>
