@@ -1,6 +1,6 @@
 import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab, Image } from "@nextui-org/react";
-import { TokenIcon } from '../public/icons/TokenIcon';
-import { ActivityIcon } from '../public/icons/ActivityIcon';
+import { TokenIcon } from '../../public/icons/TokenIcon';
+import { ActivityIcon } from '../../public/icons/ActivityIcon';
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { setupAdapter } from 'near-ca';
