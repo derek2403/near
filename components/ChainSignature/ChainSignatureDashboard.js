@@ -1,11 +1,11 @@
 import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab, Image } from "@nextui-org/react";
-import { TokenIcon } from '../public/icons/TokenIcon';
-import { ActivityIcon } from '../public/icons/ActivityIcon';
+import { TokenIcon } from '../../public/icons/TokenIcon';
+import { ActivityIcon } from '../../public/icons/ActivityIcon';
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { setupAdapter } from 'near-ca';
 import { ethers } from 'ethers';
-import { chains } from '../data/supportedChain.json';
+import { chains } from '../../data/supportedChain.json';
 
 const calculateTotalBalance = (balances) => {
   return Object.values(balances)
@@ -166,9 +166,8 @@ export default function ChainSignatureDashboard({
           size="lg"
           color="primary"
           startContent={<ArrowUpIcon className="h-5 w-5" />}
-          onPress={() => router.push('/send')}
+          onPress={() => router.push('/send?mode=chain')}
           className="h-20"
-          isDisabled
         >
           <div className="flex flex-col items-start w-full">
             <span className="text-lg">Send</span>

@@ -4,8 +4,8 @@ import { Card, CardBody, Button, Tooltip, Tabs, Tab } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { coins } from '../data/coins.json';
-import NativeNearDashboard from '../components/NativeNearDashboard';
-import ChainSignatureDashboard from '../components/ChainSignatureDashboard';
+import NativeNearDashboard from '../components/NativeNear/NativeNearDashboard';
+import ChainSignatureDashboard from '../components/ChainSignature/ChainSignatureDashboard';
 import { NearIcon } from '../public/icons/NearIcon';
 import { ChainIcon } from '../public/icons/ChainIcon';
 

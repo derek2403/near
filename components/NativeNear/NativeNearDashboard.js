@@ -48,7 +48,7 @@ export default function NativeNearDashboard({
           size="lg"
           color="primary"
           startContent={<ArrowUpIcon className="h-5 w-5" />}
-          onPress={() => router.push('/send')}
+          onPress={() => router.push('/send?mode=native')}
           className="h-20"
         >
           <div className="flex flex-col items-start w-full">
