@@ -166,9 +166,8 @@ export default function ChainSignatureDashboard({
           size="lg"
           color="primary"
           startContent={<ArrowUpIcon className="h-5 w-5" />}
-          onPress={() => router.push('/send')}
+          onPress={() => router.push('/chain-send')}
           className="h-20"
-          isDisabled
         >
           <div className="flex flex-col items-start w-full">
             <span className="text-lg">Send</span>

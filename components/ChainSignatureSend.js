@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { 
   Card, 
@@ -18,6 +18,7 @@ import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/ou
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { ethers } from 'ethers';
 import { chains } from '../data/supportedChain.json';
+import { setupAdapter } from 'near-ca';
 
 export default function ChainSignatureSend() {
   const router = useRouter();
@@ -31,6 +32,33 @@ export default function ChainSignatureSend() {
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [senderAddress, setSenderAddress] = useState(null);
+
+  useEffect(() => {
+    const deriveSenderAddress = async () => {
+      try {
+        const publicInfo = localStorage.getItem('publicWalletInfo');
+        if (!publicInfo) {
+          throw new Error('Wallet information not found');
+        }
+
+        const parsedInfo = JSON.parse(publicInfo);
+        const derivationPath = `evm,1`;
+        const adapter = await setupAdapter({
+          accountId: parsedInfo.accountId,
+          mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
+          derivationPath: derivationPath,
+        });
+
+        setSenderAddress(adapter.address);
+      } catch (err) {
+        console.error('Error deriving sender address:', err);
+        setError('Failed to derive sender address');
+      }
+    };
+
+    deriveSenderAddress();
+  }, []);
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
@@ -47,24 +75,25 @@ export default function ChainSignatureSend() {
     setIsLoading(true);
     
     try {
-      // Get wallet info from localStorage
-      const publicInfo = localStorage.getItem('publicWalletInfo');
-      
-      if (!publicInfo) {
-        throw new Error('Wallet information not found');
+      if (!senderAddress) {
+        throw new Error('Sender address not available');
       }
 
       // Setup provider for selected chain
       const provider = new ethers.JsonRpcProvider(selectedChain.rpcUrl);
       
+      // Get the signer for the sender address
+      const signer = await provider.getSigner(senderAddress);
+      
       // Create transaction object
       const tx = {
+        from: senderAddress,
         to: recipientAddress,
         value: ethers.parseEther(amount)
       };
 
-      // Send transaction
-      const transaction = await provider.sendTransaction(tx);
+      // Send transaction using the signer
+      const transaction = await signer.sendTransaction(tx);
       
       // Wait for transaction to be mined
       await transaction.wait();
