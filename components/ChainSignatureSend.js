@@ -351,7 +351,7 @@ export default function ChainSignatureSend() {
                   placeholder="Search networks"
                   className="mb-6"
                   onSelectionChange={(key) => {
-                    const selected = chains.find(chain => chain.key === key);
+                    const selected = chains.find(chain => chain.prefix === key);
                     if (selected) {
                       setSelectedChain(selected);
                       onClose();
@@ -360,7 +360,7 @@ export default function ChainSignatureSend() {
                 >
                   {(chain) => (
                     <AutocompleteItem
-                      key={chain.key}
+                      key={chain.prefix}
                       className="p-2"
                     >
                       <div className="flex items-center gap-2">
@@ -383,7 +383,7 @@ export default function ChainSignatureSend() {
                   <div className="space-y-2">
                     {chains.map((chain) => (
                       <div
-                        key={chain.key}
+                        key={chain.prefix}
                         className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
                         onClick={() => {
                           setSelectedChain(chain);
