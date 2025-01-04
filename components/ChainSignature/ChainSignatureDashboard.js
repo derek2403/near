@@ -5,7 +5,7 @@ import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon }
 import { useState, useEffect } from 'react';
 import { setupAdapter } from 'near-ca';
 import { ethers } from 'ethers';
-import { chains } from '../data/supportedChain.json';
+import { chains } from '../../data/supportedChain.json';
 
 const calculateTotalBalance = (balances) => {
   return Object.values(balances)
@@ -166,7 +166,7 @@ export default function ChainSignatureDashboard({
           size="lg"
           color="primary"
           startContent={<ArrowUpIcon className="h-5 w-5" />}
-          onPress={() => router.push('/chain-send')}
+          onPress={() => router.push('/send?mode=chain')}
           className="h-20"
         >
           <div className="flex flex-col items-start w-full">
