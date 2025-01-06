@@ -284,11 +284,11 @@ export default function ChainSignatureSend() {
                           alt={selectedChain.name} 
                           className="w-10 h-10"
                         />
-                        {/* Token Logo - Smaller and overlapping */}
+                        {/* Token Logo - Smaller and overlapping, removed border-2 border-white */}
                         <img 
                           src={selectedCoin.icon} 
                           alt={selectedCoin.label} 
-                          className="w-6 h-6 rounded-full absolute -bottom-1 -right-1 border-2 border-white"
+                          className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
                         />
                       </div>
                       <div>
