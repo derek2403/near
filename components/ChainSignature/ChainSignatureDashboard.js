@@ -26,18 +26,29 @@ export default function ChainSignatureDashboard({
   router,
   pagination
 }) {
-  const [evmAddress, setEvmAddress] = useState(null);
-  const [isDerivingAddress, setIsDerivingAddress] = useState(true);
+  const [evmAddress, setEvmAddress] = useState(() => {
+    // Try to get stored address from localStorage
+    const stored = localStorage.getItem('chainSignatureAddress');
+    return stored || null;
+  });
+  
+  const [isDerivingAddress, setIsDerivingAddress] = useState(!evmAddress); // Only true if no stored address
   const [derivationError, setDerivationError] = useState('');
-  const [chainBalances, setChainBalances] = useState({});
+  const [chainBalances, setChainBalances] = useState(() => {
+    // Try to get stored balances from localStorage
+    const stored = localStorage.getItem('chainSignatureBalances');
+    return stored ? JSON.parse(stored) : {};
+  });
 
   useEffect(() => {
     const deriveEvmAddress = async () => {
+      // If we already have an address, skip derivation
+      if (evmAddress) return;
+
       try {
         setIsDerivingAddress(true);
         setDerivationError('');
 
-        // Derive a single EVM address that will work across all chains
         const derivationPath = `evm,1`;
         const adapter = await setupAdapter({
           accountId: walletInfo?.accountId,
@@ -45,7 +56,9 @@ export default function ChainSignatureDashboard({
           derivationPath: derivationPath,
         });
 
+        // Store address in state and localStorage
         setEvmAddress(adapter.address);
+        localStorage.setItem('chainSignatureAddress', adapter.address);
 
         // Fetch balances from all supported chains
         const balances = {};
@@ -59,7 +72,10 @@ export default function ChainSignatureDashboard({
             balances[chain.prefix] = '0';
           }
         }
+        
+        // Store balances in state and localStorage
         setChainBalances(balances);
+        localStorage.setItem('chainSignatureBalances', JSON.stringify(balances));
 
       } catch (err) {
         console.error('Error deriving address:', err);
@@ -72,7 +88,18 @@ export default function ChainSignatureDashboard({
     if (walletInfo?.accountId) {
       deriveEvmAddress();
     }
-  }, [walletInfo]);
+  }, [walletInfo, evmAddress]); // Only re-run if walletInfo changes or if we don't have an address
+
+  // Add cleanup when wallet changes
+  useEffect(() => {
+    return () => {
+      // Clear stored data when component unmounts or wallet changes
+      if (!walletInfo?.accountId) {
+        localStorage.removeItem('chainSignatureAddress');
+        localStorage.removeItem('chainSignatureBalances');
+      }
+    };
+  }, [walletInfo?.accountId]);
 
   return (
     <>
