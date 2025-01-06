@@ -272,19 +272,32 @@ export default function ChainSignatureSend() {
                 className="text-3xl"
                 endContent={
                   <Button
-                  className="min-w-fit h-full" // Changed to h-full to match input height
-                  onPress={onOpen}
-                  variant="flat"
-                >
+                    className="min-w-fit h-full"
+                    onPress={onOpen}
+                    variant="flat"
+                  >
                     <div className="flex items-center gap-2">
-                      <img 
-                        src={selectedCoin.icon} 
-                        alt={selectedCoin.label} 
-                        className="w-8 h-8 rounded-full"
-                      />
+                      <div className="relative">
+                        {/* Main Chain Logo */}
+                        <img 
+                          src={selectedChain.logo} 
+                          alt={selectedChain.name} 
+                          className="w-10 h-10"
+                        />
+                        {/* Token Logo - Smaller and overlapping */}
+                        <img 
+                          src={selectedCoin.icon} 
+                          alt={selectedCoin.label} 
+                          className="w-6 h-6 rounded-full absolute -bottom-1 -right-1 border-2 border-white"
+                        />
+                      </div>
                       <div>
-                        <p className="font-medium">{selectedCoin.label}</p>
-                        <p className="text-sm text-default-500">{selectedCoin.symbol}</p>
+                        <p className="font-medium text-left">
+                          {selectedChain.name}
+                        </p>
+                        <p className="text-sm text-default-500 text-left">
+                          {selectedCoin.label}
+                        </p>
                       </div>
                     </div>
                   </Button>
