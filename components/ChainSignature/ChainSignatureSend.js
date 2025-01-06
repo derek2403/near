@@ -329,17 +329,17 @@ export default function ChainSignatureSend() {
         backdrop="opaque"
         isOpen={isOpen}
         onOpenChange={onOpenChange}
-        scrollBehavior="inside"
+        scrollBehavior="outside"
         size="2xl"
       >
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">Select Chain & Token</ModalHeader>
-              <ModalBody className="py-6">
-                <div className="flex gap-4">
-                  {/* Left side - Chain Selection */}
-                  <div className="w-1/3 border-r pr-4">
+              <ModalBody className="p-0">
+                <div className="flex">
+                  {/* Left side - Chain Selection (Fixed) */}
+                  <div className="w-1/3 p-6 border-r">
                     <h3 className="text-sm font-medium text-gray-500 mb-4">Select Chain</h3>
                     <div className="space-y-2">
                       {chains.map((chain) => (
@@ -366,64 +366,66 @@ export default function ChainSignatureSend() {
                     </div>
                   </div>
 
-                  {/* Right side - Token Selection */}
-                  <div className="w-2/3">
-                    <Autocomplete
-                      defaultItems={coins}
-                      placeholder="Search tokens"
-                      className="mb-6"
-                      onSelectionChange={(key) => {
-                        const selected = coins.find(coin => coin.key === key);
-                        if (selected) {
-                          setSelectedCoin(selected);
-                          onClose();
-                        }
-                      }}
-                    >
-                      {(coin) => (
-                        <AutocompleteItem key={coin.key} className="p-2">
-                          <div className="flex items-center gap-2">
-                            <img 
-                              src={coin.icon} 
-                              alt={coin.label} 
-                              className="w-8 h-8 rounded-full"
-                            />
-                            <div>
-                              <p className="font-medium">{coin.label}</p>
-                              <p className="text-sm text-default-500">{coin.symbol}</p>
+                  {/* Right side - Token Selection (Scrollable) */}
+                  <div className="w-2/3 max-h-[60vh] overflow-y-auto">
+                    <div className="p-6">
+                      <Autocomplete
+                        defaultItems={coins}
+                        placeholder="Search tokens"
+                        className="mb-6"
+                        onSelectionChange={(key) => {
+                          const selected = coins.find(coin => coin.key === key);
+                          if (selected) {
+                            setSelectedCoin(selected);
+                            onClose();
+                          }
+                        }}
+                      >
+                        {(coin) => (
+                          <AutocompleteItem key={coin.key} className="p-2">
+                            <div className="flex items-center gap-2">
+                              <img 
+                                src={coin.icon} 
+                                alt={coin.label} 
+                                className="w-8 h-8 rounded-full"
+                              />
+                              <div>
+                                <p className="font-medium">{coin.label}</p>
+                                <p className="text-sm text-default-500">{coin.symbol}</p>
+                              </div>
                             </div>
-                          </div>
-                        </AutocompleteItem>
-                      )}
-                    </Autocomplete>
+                          </AutocompleteItem>
+                        )}
+                      </Autocomplete>
 
-                    {/* Popular Tokens Section */}
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-gray-500">Popular tokens on {selectedChain.name}</h3>
-                      <div className="space-y-2">
-                        {coins.map((coin) => (
-                          <div
-                            key={coin.key}
-                            className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
-                            onClick={() => {
-                              setSelectedCoin(coin);
-                              onClose();
-                            }}
-                          >
-                            <img 
-                              src={coin.icon} 
-                              alt={coin.label} 
-                              className="w-8 h-8 rounded-full"
-                            />
-                            <div className="flex-grow">
-                              <p className="font-medium">{coin.label}</p>
-                              <p className="text-sm text-default-500">{coin.symbol}</p>
+                      {/* Popular Tokens Section */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-medium text-gray-500">Popular tokens on {selectedChain.name}</h3>
+                        <div className="space-y-2">
+                          {coins.map((coin) => (
+                            <div
+                              key={coin.key}
+                              className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
+                              onClick={() => {
+                                setSelectedCoin(coin);
+                                onClose();
+                              }}
+                            >
+                              <img 
+                                src={coin.icon} 
+                                alt={coin.label} 
+                                className="w-8 h-8 rounded-full"
+                              />
+                              <div className="flex-grow">
+                                <p className="font-medium">{coin.label}</p>
+                                <p className="text-sm text-default-500">{coin.symbol}</p>
+                              </div>
+                              <p className="text-sm text-default-500 hidden sm:block">
+                                {coin.description}
+                              </p>
                             </div>
-                            <p className="text-sm text-default-500 hidden sm:block">
-                              {coin.description}
-                            </p>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
