@@ -18,10 +18,11 @@ import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/ou
 import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
+import { chains } from '../../data/supportedChain.json';
 
 const { connect, keyStores } = nearAPI;
 
-export default function NativeNearSend() {
+export default function ChainSignatureSend() {
   const router = useRouter();
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
   const [selectedCoin, setSelectedCoin] = useState(coins[0]);
@@ -33,6 +34,7 @@ export default function NativeNearSend() {
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedChain, setSelectedChain] = useState(chains[0]);
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
@@ -322,75 +324,108 @@ export default function NativeNearSend() {
         </CardBody>
       </Card>
 
-      {/* Coin Selection Modal */}
+      {/* Chain and Token Selection Modal */}
       <Modal
         backdrop="opaque"
         isOpen={isOpen}
         onOpenChange={onOpenChange}
         scrollBehavior="inside"
+        size="2xl"
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">Select Token</ModalHeader>
+              <ModalHeader className="flex flex-col gap-1">Select Chain & Token</ModalHeader>
               <ModalBody className="py-6">
-                <Autocomplete
-                  defaultItems={coins}
-                  placeholder="Search tokens"
-                  className="mb-6"
-                  onSelectionChange={(key) => {
-                    const selected = coins.find(coin => coin.key === key);
-                    if (selected) {
-                      setSelectedCoin(selected);
-                      onClose();
-                    }
-                  }}
-                >
-                  {(coin) => (
-                    <AutocompleteItem
-                      key={coin.key}
-                      className="p-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <img 
-                          src={coin.icon} 
-                          alt={coin.label} 
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div>
-                          <p className="font-medium">{coin.label}</p>
-                          <p className="text-sm text-default-500">{coin.symbol}</p>
+                <div className="flex gap-4">
+                  {/* Left side - Chain Selection */}
+                  <div className="w-1/3 border-r pr-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-4">Select Chain</h3>
+                    <div className="space-y-2">
+                      {chains.map((chain) => (
+                        <div
+                          key={chain.prefix}
+                          className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedChain.prefix === chain.prefix 
+                              ? 'bg-primary-100 border border-primary' 
+                              : 'hover:bg-default-100'
+                          }`}
+                          onClick={() => setSelectedChain(chain)}
+                        >
+                          <img 
+                            src={chain.logo} 
+                            alt={chain.name} 
+                            className="w-8 h-8"
+                          />
+                          <div>
+                            <p className="font-medium">{chain.name}</p>
+                            <p className="text-xs text-default-500">{chain.symbol}</p>
+                          </div>
                         </div>
-                      </div>
-                    </AutocompleteItem>
-                  )}
-                </Autocomplete>
+                      ))}
+                    </div>
+                  </div>
 
-                {/* Popular Tokens Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-gray-500">Popular tokens</h3>
-                  <div className="space-y-2">
-                    {coins.map((coin) => (
-                      <div
-                        key={coin.key}
-                        className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
-                        onClick={() => {
-                          setSelectedCoin(coin);
+                  {/* Right side - Token Selection */}
+                  <div className="w-2/3">
+                    <Autocomplete
+                      defaultItems={coins}
+                      placeholder="Search tokens"
+                      className="mb-6"
+                      onSelectionChange={(key) => {
+                        const selected = coins.find(coin => coin.key === key);
+                        if (selected) {
+                          setSelectedCoin(selected);
                           onClose();
-                        }}
-                      >
-                        <img 
-                          src={coin.icon} 
-                          alt={coin.label} 
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div className="flex-grow">
-                          <p className="font-medium">{coin.label}</p>
-                          <p className="text-sm text-default-500">{coin.symbol}</p>
-                        </div>
-                        <p className="text-sm text-default-500 hidden sm:block">{coin.description}</p>
+                        }
+                      }}
+                    >
+                      {(coin) => (
+                        <AutocompleteItem key={coin.key} className="p-2">
+                          <div className="flex items-center gap-2">
+                            <img 
+                              src={coin.icon} 
+                              alt={coin.label} 
+                              className="w-8 h-8 rounded-full"
+                            />
+                            <div>
+                              <p className="font-medium">{coin.label}</p>
+                              <p className="text-sm text-default-500">{coin.symbol}</p>
+                            </div>
+                          </div>
+                        </AutocompleteItem>
+                      )}
+                    </Autocomplete>
+
+                    {/* Popular Tokens Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-medium text-gray-500">Popular tokens on {selectedChain.name}</h3>
+                      <div className="space-y-2">
+                        {coins.map((coin) => (
+                          <div
+                            key={coin.key}
+                            className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
+                            onClick={() => {
+                              setSelectedCoin(coin);
+                              onClose();
+                            }}
+                          >
+                            <img 
+                              src={coin.icon} 
+                              alt={coin.label} 
+                              className="w-8 h-8 rounded-full"
+                            />
+                            <div className="flex-grow">
+                              <p className="font-medium">{coin.label}</p>
+                              <p className="text-sm text-default-500">{coin.symbol}</p>
+                            </div>
+                            <p className="text-sm text-default-500 hidden sm:block">
+                              {coin.description}
+                            </p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
               </ModalBody>
