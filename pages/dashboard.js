@@ -7,7 +7,11 @@ import { coins } from '../data/coins.json';
 import NativeNearDashboard from '../components/NativeNear/NativeNearDashboard';
 import ChainSignatureDashboard from '../components/ChainSignature/ChainSignatureDashboard';
 import NearIconSvg from '../public/icons/NearIcon.svg';
-import ChainIconSvg from '../public/icons/ChainIcon.svg';
+import ChainIconSvg from '../public/icons/ChainIcon.svg';;
+import { setupAdapter } from 'near-ca';
+import { ethers } from 'ethers';
+import { chains } from '../data/supportedChain.json';
+
 
 const { connect, keyStores, providers } = nearAPI;
 
@@ -20,18 +24,28 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [isLoadingTxns, setIsLoadingTxns] = useState(true);
-  const [isVertical, setIsVertical] = useState(() => {
-    const stored = localStorage.getItem('selectedTab');
-    return stored ? stored === 'near' : true;
-  });
+  const [isVertical, setIsVertical] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 5;
+  const [evmAddress, setEvmAddress] = useState(null);
+  const [isDerivingAddress, setIsDerivingAddress] = useState(true);
+  const [derivationError, setDerivationError] = useState('');
+  const [chainBalances, setChainBalances] = useState({});
+
+  useEffect(() => {
+    const stored = localStorage.getItem('selectedTab');
+    if (stored) {
+      setIsVertical(stored === 'near');
+    }
+  }, []);
 
   const handleTabChange = (key) => {
     const isNearTab = key === "near";
     setIsVertical(isNearTab);
-    localStorage.setItem('selectedTab', key);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedTab', key);
+    }
   };
 
   useEffect(() => {
@@ -166,6 +180,49 @@ export default function Dashboard() {
     }
   };
 
+  useEffect(() => {
+    const deriveEvmAddress = async () => {
+      if (!walletInfo?.accountId || evmAddress) return;
+
+      try {
+        setIsDerivingAddress(true);
+        setDerivationError('');
+
+        const derivationPath = `evm,1`;
+        const adapter = await setupAdapter({
+          accountId: walletInfo.accountId,
+          mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
+          derivationPath: derivationPath,
+        });
+
+        setEvmAddress(adapter.address);
+
+        // Fetch balances from all supported chains
+        const balances = {};
+        for (const chain of chains) {
+          try {
+            const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
+            const balance = await provider.getBalance(adapter.address);
+            balances[chain.prefix] = ethers.formatEther(balance);
+          } catch (err) {
+            console.error(`Error fetching balance for ${chain.name}:`, err);
+            balances[chain.prefix] = '0';
+          }
+        }
+        
+        setChainBalances(balances);
+
+      } catch (err) {
+        console.error('Error deriving address:', err);
+        setDerivationError('Failed to derive EVM address');
+      } finally {
+        setIsDerivingAddress(false);
+      }
+    };
+
+    deriveEvmAddress();
+  }, [walletInfo, evmAddress]);
+
   const renderDashboard = () => {
     const props = {
       balance,
@@ -187,7 +244,13 @@ export default function Dashboard() {
 
     return isVertical ? 
       <NativeNearDashboard {...props} /> : 
-      <ChainSignatureDashboard {...props} />;
+      <ChainSignatureDashboard 
+        {...props}
+        evmAddress={evmAddress}
+        isDerivingAddress={isDerivingAddress}
+        derivationError={derivationError}
+        chainBalances={chainBalances}
+      />;
   };
 
   if (!walletInfo) {

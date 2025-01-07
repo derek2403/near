@@ -2,9 +2,6 @@ import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab, Image } from "@
 import { TokenIcon } from '../../public/icons/TokenIcon';
 import { ActivityIcon } from '../../public/icons/ActivityIcon';
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
-import { useState, useEffect } from 'react';
-import { setupAdapter } from 'near-ca';
-import { ethers } from 'ethers';
 import { chains } from '../../data/supportedChain.json';
 
 const calculateTotalBalance = (balances) => {
@@ -24,83 +21,12 @@ export default function ChainSignatureDashboard({
   getTransactionType,
   getTransactionAmount,
   router,
-  pagination
+  pagination,
+  evmAddress,
+  isDerivingAddress,
+  derivationError,
+  chainBalances
 }) {
-  const [evmAddress, setEvmAddress] = useState(() => {
-    // Try to get stored address from localStorage
-    const stored = localStorage.getItem('chainSignatureAddress');
-    return stored || null;
-  });
-  
-  const [isDerivingAddress, setIsDerivingAddress] = useState(!evmAddress); // Only true if no stored address
-  const [derivationError, setDerivationError] = useState('');
-  const [chainBalances, setChainBalances] = useState(() => {
-    // Try to get stored balances from localStorage
-    const stored = localStorage.getItem('chainSignatureBalances');
-    return stored ? JSON.parse(stored) : {};
-  });
-
-  useEffect(() => {
-    const deriveEvmAddress = async () => {
-      // If we already have an address, skip derivation
-      if (evmAddress) return;
-
-      try {
-        setIsDerivingAddress(true);
-        setDerivationError('');
-
-        const derivationPath = `evm,1`;
-        const adapter = await setupAdapter({
-          accountId: walletInfo?.accountId,
-          mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
-          derivationPath: derivationPath,
-        });
-
-        // Store address in state and localStorage
-        setEvmAddress(adapter.address);
-        localStorage.setItem('chainSignatureAddress', adapter.address);
-
-        // Fetch balances from all supported chains
-        const balances = {};
-        for (const chain of chains) {
-          try {
-            const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
-            const balance = await provider.getBalance(adapter.address);
-            balances[chain.prefix] = ethers.formatEther(balance);
-          } catch (err) {
-            console.error(`Error fetching balance for ${chain.name}:`, err);
-            balances[chain.prefix] = '0';
-          }
-        }
-        
-        // Store balances in state and localStorage
-        setChainBalances(balances);
-        localStorage.setItem('chainSignatureBalances', JSON.stringify(balances));
-
-      } catch (err) {
-        console.error('Error deriving address:', err);
-        setDerivationError('Failed to derive EVM address');
-      } finally {
-        setIsDerivingAddress(false);
-      }
-    };
-
-    if (walletInfo?.accountId) {
-      deriveEvmAddress();
-    }
-  }, [walletInfo, evmAddress]); // Only re-run if walletInfo changes or if we don't have an address
-
-  // Add cleanup when wallet changes
-  useEffect(() => {
-    return () => {
-      // Clear stored data when component unmounts or wallet changes
-      if (!walletInfo?.accountId) {
-        localStorage.removeItem('chainSignatureAddress');
-        localStorage.removeItem('chainSignatureBalances');
-      }
-    };
-  }, [walletInfo?.accountId]);
-
   return (
     <>
       {/* Main Balance Card */}
