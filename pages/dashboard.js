@@ -20,10 +20,19 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [isLoadingTxns, setIsLoadingTxns] = useState(true);
-  const [isVertical, setIsVertical] = useState(true);
+  const [isVertical, setIsVertical] = useState(() => {
+    const stored = localStorage.getItem('selectedTab');
+    return stored ? stored === 'near' : true;
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 5;
+
+  const handleTabChange = (key) => {
+    const isNearTab = key === "near";
+    setIsVertical(isNearTab);
+    localStorage.setItem('selectedTab', key);
+  };
 
   useEffect(() => {
     const fetchWalletInfo = async () => {
@@ -201,7 +210,7 @@ export default function Dashboard() {
             <Tabs 
               aria-label="Wallet Mode" 
               selectedKey={isVertical ? "near" : "chain"}
-              onSelectionChange={(key) => setIsVertical(key === "near")}
+              onSelectionChange={handleTabChange}
               variant="bordered"
               classNames={{
                 tabList: "gap-4",
