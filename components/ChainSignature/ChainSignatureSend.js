@@ -22,6 +22,21 @@ import { chains } from '../../data/supportedChain.json';
 
 const { connect, keyStores } = nearAPI;
 
+const getTokenDescription = (coin, chain) => {
+  // If the token symbol matches the chain's native token symbol, it's native
+  if (coin.symbol === chain.symbol) {
+    return `Native Token on ${chain.name}`;
+  }
+  
+  // Special case for NEAR token
+  if (coin.symbol === 'NEAR') {
+    return `Wrapped NEAR on ${chain.name}`;
+  }
+  
+  // For other tokens
+  return `${coin.label} on ${chain.name}`;
+};
+
 export default function ChainSignatureSend() {
   const router = useRouter();
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
@@ -404,7 +419,9 @@ export default function ChainSignatureSend() {
                               />
                               <div>
                                 <p className="font-medium">{coin.label}</p>
-                                <p className="text-sm text-default-500">{coin.symbol}</p>
+                                <p className="text-sm text-default-500">
+                                  {getTokenDescription(coin, selectedChain)}
+                                </p>
                               </div>
                             </div>
                           </AutocompleteItem>
@@ -434,7 +451,7 @@ export default function ChainSignatureSend() {
                                 <p className="text-sm text-default-500">{coin.symbol}</p>
                               </div>
                               <p className="text-sm text-default-500 hidden sm:block">
-                                {coin.description}
+                                {getTokenDescription(coin, selectedChain)}
                               </p>
                             </div>
                           ))}
