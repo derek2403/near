@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Card, CardBody, Button, Tooltip, Tabs, Tab } from "@nextui-org/react";
+import { Card, CardBody, Button, Tooltip, Tabs, Tab, Image } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { coins } from '../data/coins.json';
 import NativeNearDashboard from '../components/NativeNear/NativeNearDashboard';
 import ChainSignatureDashboard from '../components/ChainSignature/ChainSignatureDashboard';
-import { NearIcon } from '../public/icons/NearIcon';
-import { ChainIcon } from '../public/icons/ChainIcon';
+import NearIconSvg from '../public/icons/NearIcon.svg';
+import ChainIconSvg from '../public/icons/ChainIcon.svg';
 
 const { connect, keyStores, providers } = nearAPI;
 
@@ -214,7 +214,7 @@ export default function Dashboard() {
                 key="near"
                 title={
                   <div className="flex items-center space-x-2">
-                    <NearIcon className="w-4 h-4" />
+                    <NearIconSvg className="w-4 h-4" />
                     <span className="text-sm">Native NEAR</span>
                   </div>
                 }
@@ -223,7 +223,7 @@ export default function Dashboard() {
                 key="chain"
                 title={
                   <div className="flex items-center space-x-2">
-                    <ChainIcon className="w-4 h-4" />
+                    <ChainIconSvg className="w-4 h-4" />
                     <span className="text-sm">Chain Signature</span>
                   </div>
                 }
