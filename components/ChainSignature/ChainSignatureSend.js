@@ -18,10 +18,26 @@ import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/ou
 import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
+import { chains } from '../../data/supportedChain.json';
 
 const { connect, keyStores } = nearAPI;
 
-export default function NativeNearSend() {
+const getTokenDescription = (coin, chain) => {
+  // If the token symbol matches the chain's native token symbol, it's native
+  if (coin.symbol === chain.symbol) {
+    return `Native Token on ${chain.name}`;
+  }
+  
+  // Special case for NEAR token
+  if (coin.symbol === 'NEAR') {
+    return `Wrapped NEAR on ${chain.name}`;
+  }
+  
+  // For other tokens
+  return `${coin.label} on ${chain.name}`;
+};
+
+export default function ChainSignatureSend() {
   const router = useRouter();
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
   const [selectedCoin, setSelectedCoin] = useState(coins[0]);
@@ -33,6 +49,7 @@ export default function NativeNearSend() {
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedChain, setSelectedChain] = useState(chains[0]);
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
@@ -270,19 +287,32 @@ export default function NativeNearSend() {
                 className="text-3xl"
                 endContent={
                   <Button
-                  className="min-w-fit h-full" // Changed to h-full to match input height
-                  onPress={onOpen}
-                  variant="flat"
-                >
+                    className="min-w-fit h-full"
+                    onPress={onOpen}
+                    variant="flat"
+                  >
                     <div className="flex items-center gap-2">
-                      <img 
-                        src={selectedCoin.icon} 
-                        alt={selectedCoin.label} 
-                        className="w-8 h-8 rounded-full"
-                      />
+                      <div className="relative">
+                        {/* Main Chain Logo */}
+                        <img 
+                          src={selectedChain.logo} 
+                          alt={selectedChain.name} 
+                          className="w-10 h-10"
+                        />
+                        {/* Token Logo - Smaller and overlapping, removed border-2 border-white */}
+                        <img 
+                          src={selectedCoin.icon} 
+                          alt={selectedCoin.label} 
+                          className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
+                        />
+                      </div>
                       <div>
-                        <p className="font-medium">{selectedCoin.label}</p>
-                        <p className="text-sm text-default-500">{selectedCoin.symbol}</p>
+                        <p className="font-medium text-left">
+                          {selectedChain.name}
+                        </p>
+                        <p className="text-sm text-default-500 text-left">
+                          {selectedCoin.label}
+                        </p>
                       </div>
                     </div>
                   </Button>
@@ -322,75 +352,112 @@ export default function NativeNearSend() {
         </CardBody>
       </Card>
 
-      {/* Coin Selection Modal */}
+      {/* Chain and Token Selection Modal */}
       <Modal
         backdrop="opaque"
         isOpen={isOpen}
         onOpenChange={onOpenChange}
-        scrollBehavior="inside"
+        scrollBehavior="outside"
+        size="2xl"
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">Select Token</ModalHeader>
-              <ModalBody className="py-6">
-                <Autocomplete
-                  defaultItems={coins}
-                  placeholder="Search tokens"
-                  className="mb-6"
-                  onSelectionChange={(key) => {
-                    const selected = coins.find(coin => coin.key === key);
-                    if (selected) {
-                      setSelectedCoin(selected);
-                      onClose();
-                    }
-                  }}
-                >
-                  {(coin) => (
-                    <AutocompleteItem
-                      key={coin.key}
-                      className="p-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <img 
-                          src={coin.icon} 
-                          alt={coin.label} 
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div>
-                          <p className="font-medium">{coin.label}</p>
-                          <p className="text-sm text-default-500">{coin.symbol}</p>
+              <ModalHeader className="flex flex-col gap-1">Select Chain & Token</ModalHeader>
+              <ModalBody className="p-0">
+                <div className="flex">
+                  {/* Left side - Chain Selection (Fixed) */}
+                  <div className="w-1/3 p-6 border-r">
+                    <h3 className="text-sm font-medium text-gray-500 mb-4">Select Chain</h3>
+                    <div className="space-y-2">
+                      {chains.map((chain) => (
+                        <div
+                          key={chain.prefix}
+                          className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedChain.prefix === chain.prefix 
+                              ? 'bg-primary-100 border border-primary' 
+                              : 'hover:bg-default-100'
+                          }`}
+                          onClick={() => setSelectedChain(chain)}
+                        >
+                          <img 
+                            src={chain.logo} 
+                            alt={chain.name} 
+                            className="w-8 h-8"
+                          />
+                          <div>
+                            <p className="font-medium">{chain.name}</p>
+                            <p className="text-xs text-default-500">{chain.symbol}</p>
+                          </div>
                         </div>
-                      </div>
-                    </AutocompleteItem>
-                  )}
-                </Autocomplete>
+                      ))}
+                    </div>
+                  </div>
 
-                {/* Popular Tokens Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-gray-500">Popular tokens</h3>
-                  <div className="space-y-2">
-                    {coins.map((coin) => (
-                      <div
-                        key={coin.key}
-                        className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
-                        onClick={() => {
-                          setSelectedCoin(coin);
-                          onClose();
+                  {/* Right side - Token Selection (Scrollable) */}
+                  <div className="w-2/3 max-h-[60vh] overflow-y-auto">
+                    <div className="p-6">
+                      <Autocomplete
+                        defaultItems={coins}
+                        placeholder="Search tokens"
+                        className="mb-6"
+                        onSelectionChange={(key) => {
+                          const selected = coins.find(coin => coin.key === key);
+                          if (selected) {
+                            setSelectedCoin(selected);
+                            onClose();
+                          }
                         }}
                       >
-                        <img 
-                          src={coin.icon} 
-                          alt={coin.label} 
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div className="flex-grow">
-                          <p className="font-medium">{coin.label}</p>
-                          <p className="text-sm text-default-500">{coin.symbol}</p>
+                        {(coin) => (
+                          <AutocompleteItem key={coin.key} className="p-2">
+                            <div className="flex items-center gap-2">
+                              <img 
+                                src={coin.icon} 
+                                alt={coin.label} 
+                                className="w-8 h-8 rounded-full"
+                              />
+                              <div>
+                                <p className="font-medium">{coin.label}</p>
+                                <p className="text-sm text-default-500">
+                                  {getTokenDescription(coin, selectedChain)}
+                                </p>
+                              </div>
+                            </div>
+                          </AutocompleteItem>
+                        )}
+                      </Autocomplete>
+
+                      {/* Popular Tokens Section */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-medium text-gray-500">Popular tokens on {selectedChain.name}</h3>
+                        <div className="space-y-2">
+                          {coins.map((coin) => (
+                            <div
+                              key={coin.key}
+                              className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
+                              onClick={() => {
+                                setSelectedCoin(coin);
+                                onClose();
+                              }}
+                            >
+                              <img 
+                                src={coin.icon} 
+                                alt={coin.label} 
+                                className="w-8 h-8 rounded-full"
+                              />
+                              <div className="flex-grow">
+                                <p className="font-medium">{coin.label}</p>
+                                <p className="text-sm text-default-500">{coin.symbol}</p>
+                              </div>
+                              <p className="text-sm text-default-500 hidden sm:block">
+                                {getTokenDescription(coin, selectedChain)}
+                              </p>
+                            </div>
+                          ))}
                         </div>
-                        <p className="text-sm text-default-500 hidden sm:block">{coin.description}</p>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
               </ModalBody>

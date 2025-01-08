@@ -9,6 +9,8 @@ import { useDisclosure } from '@nextui-org/react';
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
+const FASTNEAR_API_URL = "https://test.api.fastnear.com"; // Using FastNear API testnet
+
 export default function Login() {
   const [loginMethod, setLoginMethod] = useState('seedPhrase');
   const [seedPhrase, setSeedPhrase] = useState('');
@@ -24,6 +26,21 @@ export default function Login() {
   const [passwordError, setPasswordError] = useState('');
   const [tempWalletInfo, setTempWalletInfo] = useState(null);
 
+  const lookupAccountsByPublicKey = async (publicKey) => {
+    try {
+      const response = await fetch(`${FASTNEAR_API_URL}/v0/public_key/${publicKey}/all`);
+      if (!response.ok) {
+        throw new Error('Failed to lookup accounts');
+      }
+      const data = await response.json();
+      console.log('FastNear API - Found accounts for public key:', data);
+      return data.account_ids || [];
+    } catch (error) {
+      console.error('FastNear API - Error looking up accounts:', error);
+      return [];
+    }
+  };
+
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
@@ -32,6 +49,7 @@ export default function Login() {
       let keyPair;
       let publicKey;
       let finalAccountId;
+      let walletInfo;
 
       if (loginMethod === 'seedPhrase') {
         if (!seedPhrase.trim()) {
@@ -44,13 +62,31 @@ export default function Login() {
         keyPair = KeyPair.fromString(parsedKey.secretKey);
         publicKey = parsedKey.publicKey;
         
-        // Get account ID from the first word of seed phrase
-        finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
+        // Log derived keys for verification
+        console.log('=== Seed Phrase Derived Keys ===');
+        console.log('Original Seed Phrase:', seedPhrase);
+        console.log('Derived Public Key:', publicKey);
+        console.log('Derived Private Key:', parsedKey.secretKey);
+        console.log('===============================');
         
-        // Log the reconstructed information
-        console.log('From Seed Phrase:');
-        console.log('Public Key:', publicKey);
-        console.log('Account ID:', finalAccountId);
+        // Continue with account lookup...
+        const accounts = await lookupAccountsByPublicKey(publicKey);
+        console.log('Accounts found for seed phrase:', accounts);
+        
+        if (accounts.length === 0) {
+          finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
+          console.log('No accounts found, using fallback account ID:', finalAccountId);
+        } else {
+          finalAccountId = accounts.find(acc => acc.includes('.')) || accounts[0];
+        }
+        
+        walletInfo = {
+          accountId: finalAccountId,
+          publicKey: publicKey.toString(),
+          seedPhrase: seedPhrase,
+          secretKey: parsedKey.secretKey,
+          loginMethod: 'seedPhrase'
+        };
         
       } else {
         if (!privateKey.trim()) {
@@ -62,44 +98,40 @@ export default function Login() {
         keyPair = KeyPair.fromString(privateKey);
         publicKey = keyPair.getPublicKey().toString();
         
-        // Set up connection to get account info
-        const connectionConfig = {
-          networkId: "testnet",
-          keyStore: new keyStores.InMemoryKeyStore(),
-          nodeUrl: "https://rpc.testnet.near.org",
-        };
-
-        // Connect to NEAR and get account details
-        const near = await connect(connectionConfig);
+        // Log keys for verification
+        console.log('=== Private Key Information ===');
+        console.log('Original Private Key:', privateKey);
+        console.log('Derived Public Key:', publicKey);
+        console.log('Note: Seed phrase cannot be derived from private key');
+        console.log('============================');
         
-        try {
-          // Try to get account info using the public key
-          const account = await near.account(publicKey);
-          finalAccountId = account.accountId;
-          
-          // Log the reconstructed information
-          console.log('From Private Key:');
-          console.log('Public Key:', publicKey);
-          console.log('Account ID:', finalAccountId);
-          
-        } catch (accountError) {
-          console.error('Error getting account from private key:', accountError);
-          throw new Error('Could not retrieve account information from private key');
+        // Continue with account lookup...
+        const accounts = await lookupAccountsByPublicKey(publicKey);
+        console.log('Accounts found for private key:', accounts);
+
+        if (accounts.length === 0) {
+          throw new Error('No accounts found for this private key');
         }
+        
+        finalAccountId = accounts.find(acc => acc.includes('.')) || accounts[0];
+        
+        walletInfo = {
+          accountId: finalAccountId,
+          publicKey: publicKey.toString(),
+          secretKey: privateKey,
+          seedPhrase: null,
+          loginMethod: 'privateKey'
+        };
       }
 
-      // Create wallet info object
-      const walletInfo = {
-        accountId: finalAccountId,
-        publicKey: publicKey.toString(),
-        secretKey: keyPair.toString(),
-        seedPhrase: loginMethod === 'seedPhrase' ? seedPhrase : null
-      };
-
-      // Log the final wallet info (except secret key for security)
-      console.log('Final Wallet Info:');
+      // Log final wallet info for verification
+      console.log('=== Final Wallet Info ===');
       console.log('Account ID:', walletInfo.accountId);
       console.log('Public Key:', walletInfo.publicKey);
+      console.log('Login Method:', walletInfo.loginMethod);
+      console.log('Has Seed Phrase:', !!walletInfo.seedPhrase);
+      console.log('Has Private Key:', !!walletInfo.secretKey);
+      console.log('=======================');
 
       // Store temporarily and open password modal
       setTempWalletInfo(walletInfo);
@@ -123,7 +155,8 @@ export default function Login() {
       // Store public info separately
       localStorage.setItem('publicWalletInfo', JSON.stringify({
         accountId: tempWalletInfo.accountId,
-        publicKey: tempWalletInfo.publicKey
+        publicKey: tempWalletInfo.publicKey,
+        loginMethod: tempWalletInfo.loginMethod // Add login method to public info
       }));
 
       // Store password hash for verification
@@ -138,7 +171,7 @@ export default function Login() {
     }
   };
 
-  // Add the utility functions
+  // Add utility functions for encryption (same as createWallet.js)
   const encryptWalletData = async (walletInfo, password) => {
     // Implementation using a proper encryption library
     // This is a placeholder - use proper encryption in production
@@ -168,121 +201,95 @@ export default function Login() {
             </Card>
           )}
 
-          {loggedInAccount && (
-            <Card className="bg-success-50 border-none mb-4">
-              <CardBody className="p-6">
-                <div className="text-center">
-                  <div className="text-success font-medium mb-2">
-                    Successfully logged in!
-                  </div>
-                  <div className="text-gray-700 mb-4">
-                    Account: <span className="font-mono font-medium">{loggedInAccount}</span>
-                  </div>
-                  <Button
-                    onPress={() => router.push('/transfer')}
-                    color="primary"
+          <div className="space-y-6">
+            <Tabs
+              selectedKey={loginMethod}
+              onSelectionChange={setLoginMethod}
+              variant="bordered"
+              fullWidth
+              classNames={{
+                tabList: "gap-4",
+                cursor: "w-full bg-primary",
+                tab: "h-10",
+                tabContent: "group-data-[selected=true]:text-white"
+              }}
+            >
+              <Tab key="seedPhrase" title="Seed Phrase">
+                <div className="pt-4">
+                  <Input
+                    label="Enter your seed phrase (12 words separated by spaces)"
+                    value={seedPhrase}
+                    onChange={(e) => setSeedPhrase(e.target.value)}
+                    variant="bordered"
                     className="w-full"
-                  >
-                    Go to Transfer Page
-                  </Button>
+                    type={showSeedPhrase ? "text" : "password"}
+                    endContent={
+                      <button
+                        onClick={() => setShowSeedPhrase(!showSeedPhrase)}
+                        className="focus:outline-none"
+                      >
+                        {showSeedPhrase ? (
+                          <EyeSlashIcon className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5 text-gray-500" />
+                        )}
+                      </button>
+                    }
+                  />
                 </div>
-              </CardBody>
-            </Card>
-          )}
+              </Tab>
+              <Tab key="privateKey" title="Private Key">
+                <div className="pt-4">
+                  <Input
+                    type={showPrivateKey ? "text" : "password"}
+                    label="Enter your private key"
+                    value={privateKey}
+                    onChange={(e) => setPrivateKey(e.target.value)}
+                    variant="bordered"
+                    className="w-full"
+                    endContent={
+                      <button
+                        onClick={() => setShowPrivateKey(!showPrivateKey)}
+                        className="focus:outline-none"
+                      >
+                        {showPrivateKey ? (
+                          <EyeSlashIcon className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5 text-gray-500" />
+                        )}
+                      </button>
+                    }
+                  />
+                </div>
+              </Tab>
+            </Tabs>
 
-          {!loggedInAccount && (
-            <div className="space-y-6">
-              <Tabs
-                selectedKey={loginMethod}
-                onSelectionChange={setLoginMethod}
-                variant="bordered"
-                fullWidth
-                classNames={{
-                  tabList: "gap-4",
-                  cursor: "w-full bg-primary",
-                  tab: "h-10",
-                  tabContent: "group-data-[selected=true]:text-white"
+            <Button
+              onPress={handleLogin}
+              isDisabled={loading}
+              color="primary"
+              className="w-full"
+              size="lg"
+              isLoading={loading}
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </Button>
+          </div>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have a wallet?{' '}
+              <span
+                onClick={() => router.push('/createWallet')}
+                style={{
+                  color: "#0070f3",
+                  cursor: "pointer"
                 }}
               >
-                <Tab key="seedPhrase" title="Seed Phrase">
-                  <div className="pt-4">
-                    <Input
-                      label="Enter your seed phrase (12 words separated by spaces)"
-                      value={seedPhrase}
-                      onChange={(e) => setSeedPhrase(e.target.value)}
-                      variant="bordered"
-                      className="w-full"
-                      type={showSeedPhrase ? "text" : "password"}
-                      endContent={
-                        <button
-                          onClick={() => setShowSeedPhrase(!showSeedPhrase)}
-                          className="focus:outline-none"
-                        >
-                          {showSeedPhrase ? (
-                            <EyeSlashIcon className="h-5 w-5 text-gray-500" />
-                          ) : (
-                            <EyeIcon className="h-5 w-5 text-gray-500" />
-                          )}
-                        </button>
-                      }
-                    />
-                  </div>
-                </Tab>
-                <Tab key="privateKey" title="Private Key">
-                  <div className="pt-4">
-                    <Input
-                      type={showPrivateKey ? "text" : "password"}
-                      label="Enter your private key"
-                      value={privateKey}
-                      onChange={(e) => setPrivateKey(e.target.value)}
-                      variant="bordered"
-                      className="w-full"
-                      endContent={
-                        <button
-                          onClick={() => setShowPrivateKey(!showPrivateKey)}
-                          className="focus:outline-none"
-                        >
-                          {showPrivateKey ? (
-                            <EyeSlashIcon className="h-5 w-5 text-gray-500" />
-                          ) : (
-                            <EyeIcon className="h-5 w-5 text-gray-500" />
-                          )}
-                        </button>
-                      }
-                    />
-                  </div>
-                </Tab>
-              </Tabs>
-
-              <Button
-                onPress={handleLogin}
-                isDisabled={loading}
-                color="primary"
-                className="w-full"
-                size="lg"
-                isLoading={loading}
-              >
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
-            </div>
-          )}
-
-          {!loggedInAccount && (
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Don't have a wallet?{' '}
-                <span
-                  onClick={() => router.push('/createWallet')}
-                  style={{
-                    color: "#0070f3", // Primary blue color
-                    cursor: "pointer"
-                  }}
-                >
-                  Create one here
-                </span>
-              </p>
-            </div>
-          )}
+                Create one here
+              </span>
+            </p>
+          </div>
         </CardBody>
       </Card>
 

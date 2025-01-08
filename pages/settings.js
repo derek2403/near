@@ -63,7 +63,7 @@ export default function Settings() {
 
   const handleLogout = () => {
     localStorage.clear();
-    router.push('/login');
+    router.push('/');
   };
 
   const toggleVisibility = (field) => {
@@ -123,7 +123,7 @@ export default function Settings() {
                   </div>
                 </div>
 
-                {walletInfo.seedPhrase && (
+                {walletInfo.seedPhrase ? (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Seed Phrase:</label>
                     <div className="flex items-center bg-white p-3 rounded-lg border">
@@ -150,6 +150,17 @@ export default function Settings() {
                           <EyeIcon className="h-5 w-5" />
                         )}
                       </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Seed Phrase:</label>
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <p className="text-sm text-blue-800">
+                        This account was not created or imported (using Secret Phrase) via Nearer, so no encrypted secret phrase is currently available.
+                        <br /><br />
+                        Rest assured, your original secret phrase should still work as a recovery method if you haven't removed it from your Near account.
+                      </p>
                     </div>
                   </div>
                 )}

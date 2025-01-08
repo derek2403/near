@@ -2,9 +2,6 @@ import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab, Image } from "@
 import { TokenIcon } from '../../public/icons/TokenIcon';
 import { ActivityIcon } from '../../public/icons/ActivityIcon';
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
-import { useState, useEffect } from 'react';
-import { setupAdapter } from 'near-ca';
-import { ethers } from 'ethers';
 import { chains } from '../../data/supportedChain.json';
 
 const calculateTotalBalance = (balances) => {
@@ -24,56 +21,12 @@ export default function ChainSignatureDashboard({
   getTransactionType,
   getTransactionAmount,
   router,
-  pagination
+  pagination,
+  evmAddress,
+  isDerivingAddress,
+  derivationError,
+  chainBalances
 }) {
-  const [evmAddress, setEvmAddress] = useState(null);
-  const [isDerivingAddress, setIsDerivingAddress] = useState(true);
-  const [derivationError, setDerivationError] = useState('');
-  const [chainBalances, setChainBalances] = useState({});
-
-  useEffect(() => {
-    const deriveEvmAddress = async () => {
-      try {
-        setIsDerivingAddress(true);
-        setDerivationError('');
-
-        // Derive a single EVM address that will work across all chains
-        const derivationPath = `evm,1`;
-        const adapter = await setupAdapter({
-          accountId: walletInfo?.accountId,
-          mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
-          derivationPath: derivationPath,
-        });
-
-        setEvmAddress(adapter.address);
-
-        // Fetch balances from all supported chains
-        const balances = {};
-        for (const chain of chains) {
-          try {
-            const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
-            const balance = await provider.getBalance(adapter.address);
-            balances[chain.prefix] = ethers.formatEther(balance);
-          } catch (err) {
-            console.error(`Error fetching balance for ${chain.name}:`, err);
-            balances[chain.prefix] = '0';
-          }
-        }
-        setChainBalances(balances);
-
-      } catch (err) {
-        console.error('Error deriving address:', err);
-        setDerivationError('Failed to derive EVM address');
-      } finally {
-        setIsDerivingAddress(false);
-      }
-    };
-
-    if (walletInfo?.accountId) {
-      deriveEvmAddress();
-    }
-  }, [walletInfo]);
-
   return (
     <>
       {/* Main Balance Card */}
@@ -209,27 +162,38 @@ export default function ChainSignatureDashboard({
               title={
                 <div className="flex items-center space-x-2">
                   <TokenIcon />
-                  <span>Tokens</span>
-                 
+                  <span>Chain Balances</span>
                 </div>
               }
             >
               <div className="py-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-blue-100">
-                      <TokenIcon className="h-5 w-5 text-blue-500" />
+                {chains.map((chain) => (
+                  <div key={chain.prefix} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={chain.logo} 
+                        alt={chain.name} 
+                        className="w-8 h-8"
+                      />
+                      <div>
+                        <div className="font-medium">{chain.name}</div>
+                        <div className="text-sm text-gray-500">{chain.symbol}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-medium">NEAR</div>
-                      <div className="text-sm text-gray-500">Native Token</div>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {chainBalances[chain.prefix] || '0.0000'} {chain.symbol}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="light"
+                        onPress={() => window.open(`${chain.explorerUrl}${evmAddress}`, '_blank')}
+                      >
+                        View
+                      </Button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-medium">{balance} NEAR</div>
-                    <div className="text-sm text-gray-500">≈ $0.00 USD</div>
-                  </div>
-                </div>
+                ))}
               </div>
             </Tab>
             <Tab
@@ -238,73 +202,18 @@ export default function ChainSignatureDashboard({
                 <div className="flex items-center space-x-2">
                   <ActivityIcon />
                   <span>Recent Transactions</span>
-                 
                 </div>
               }
             >
               <div className="py-4">
-                {isLoadingTxns ? (
-                  <div className="text-center py-4">Loading transactions...</div>
-                ) : transactions.length === 0 ? (
-                  <div className="text-center py-4">No transactions found</div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Transaction list */}
-                    <div className="space-y-3">
-                      {transactions.map((tx) => (
-                        <div
-                          key={tx.transaction_hash}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${
-                              getTransactionType(tx, walletInfo.accountId) === 'Sent' 
-                                ? 'bg-pink-100' 
-                                : 'bg-green-100'
-                            }`}>
-                              {getTransactionType(tx, walletInfo.accountId) === 'Sent' 
-                                ? <ArrowUpIcon className="h-5 w-5 text-pink-500" />
-                                : <ArrowDownIcon className="h-5 w-5 text-green-500" />
-                              }
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {getTransactionType(tx, walletInfo.accountId)}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {formatDate(tx.block_timestamp)}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {getTransactionAmount(tx)} NEAR
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              <Button
-                                size="sm"
-                                variant="light"
-                                onPress={() => window.open(`https://explorer.testnet.near.org/transactions/${tx.transaction_hash}`, '_blank')}
-                              >
-                                View
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Pagination */}
-                    <div className="flex justify-center mt-4">
-                      <Pagination
-                        total={pagination.totalPages}
-                        page={pagination.currentPage}
-                        onChange={pagination.onPageChange}
-                        showControls
-                      />
-                    </div>
+                <div className="text-center py-8">
+                  <div className="mb-4 text-gray-500">
+                    Chain Signature transactions will appear here
                   </div>
-                )}
+                  <div className="text-sm text-gray-400">
+                    Your EVM chain transactions will be displayed in this section once you start making transfers
+                  </div>
+                </div>
               </div>
             </Tab>
           </Tabs>
