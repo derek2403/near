@@ -162,27 +162,38 @@ export default function ChainSignatureDashboard({
               title={
                 <div className="flex items-center space-x-2">
                   <TokenIcon />
-                  <span>Tokens</span>
-                 
+                  <span>Chain Balances</span>
                 </div>
               }
             >
               <div className="py-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-blue-100">
-                      <TokenIcon className="h-5 w-5 text-blue-500" />
+                {chains.map((chain) => (
+                  <div key={chain.prefix} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={chain.logo} 
+                        alt={chain.name} 
+                        className="w-8 h-8"
+                      />
+                      <div>
+                        <div className="font-medium">{chain.name}</div>
+                        <div className="text-sm text-gray-500">{chain.symbol}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-medium">NEAR</div>
-                      <div className="text-sm text-gray-500">Native Token</div>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {chainBalances[chain.prefix] || '0.0000'} {chain.symbol}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="light"
+                        onPress={() => window.open(`${chain.explorerUrl}${evmAddress}`, '_blank')}
+                      >
+                        View
+                      </Button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-medium">{balance} NEAR</div>
-                    <div className="text-sm text-gray-500">≈ $0.00 USD</div>
-                  </div>
-                </div>
+                ))}
               </div>
             </Tab>
             <Tab
@@ -191,7 +202,6 @@ export default function ChainSignatureDashboard({
                 <div className="flex items-center space-x-2">
                   <ActivityIcon />
                   <span>Recent Transactions</span>
-                 
                 </div>
               }
             >
