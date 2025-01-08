@@ -9,6 +9,8 @@ import { useDisclosure } from '@nextui-org/react';
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
+const FASTNEAR_API_URL = "https://test.api.fastnear.com"; // Using FastNear API testnet
+
 export default function Login() {
   const [loginMethod, setLoginMethod] = useState('seedPhrase');
   const [seedPhrase, setSeedPhrase] = useState('');
@@ -23,6 +25,21 @@ export default function Login() {
   const {isOpen, onOpen, onClose} = useDisclosure();
   const [passwordError, setPasswordError] = useState('');
   const [tempWalletInfo, setTempWalletInfo] = useState(null);
+
+  const lookupAccountsByPublicKey = async (publicKey) => {
+    try {
+      const response = await fetch(`${FASTNEAR_API_URL}/v0/public_key/${publicKey}/all`);
+      if (!response.ok) {
+        throw new Error('Failed to lookup accounts');
+      }
+      const data = await response.json();
+      console.log('FastNear API - Found accounts for public key:', data);
+      return data.account_ids || [];
+    } catch (error) {
+      console.error('FastNear API - Error looking up accounts:', error);
+      return [];
+    }
+  };
 
   const handleLogin = async () => {
     setLoading(true);
@@ -44,13 +61,24 @@ export default function Login() {
         keyPair = KeyPair.fromString(parsedKey.secretKey);
         publicKey = parsedKey.publicKey;
         
-        // Get account ID from the first word of seed phrase
-        finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
+        // Lookup accounts using FastNear API
+        const accounts = await lookupAccountsByPublicKey(publicKey);
+        console.log('Accounts found for seed phrase:', accounts);
+        
+        if (accounts.length === 0) {
+          // Fallback to implicit account ID if no accounts found
+          finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
+          console.log('No accounts found, using fallback account ID:', finalAccountId);
+        } else {
+          // Use the first non-implicit account, or the first account if all are implicit
+          finalAccountId = accounts.find(acc => acc.includes('.')) || accounts[0];
+        }
         
         // Log the reconstructed information
         console.log('From Seed Phrase:');
         console.log('Public Key:', publicKey);
-        console.log('Account ID:', finalAccountId);
+        console.log('Found Account IDs:', accounts);
+        console.log('Selected Account ID:', finalAccountId);
         
       } else {
         if (!privateKey.trim()) {
@@ -62,30 +90,22 @@ export default function Login() {
         keyPair = KeyPair.fromString(privateKey);
         publicKey = keyPair.getPublicKey().toString();
         
-        // Set up connection to get account info
-        const connectionConfig = {
-          networkId: "testnet",
-          keyStore: new keyStores.InMemoryKeyStore(),
-          nodeUrl: "https://rpc.testnet.near.org",
-        };
+        // Lookup accounts using FastNear API
+        const accounts = await lookupAccountsByPublicKey(publicKey);
+        console.log('Accounts found for private key:', accounts);
 
-        // Connect to NEAR and get account details
-        const near = await connect(connectionConfig);
-        
-        try {
-          // Try to get account info using the public key
-          const account = await near.account(publicKey);
-          finalAccountId = account.accountId;
-          
-          // Log the reconstructed information
-          console.log('From Private Key:');
-          console.log('Public Key:', publicKey);
-          console.log('Account ID:', finalAccountId);
-          
-        } catch (accountError) {
-          console.error('Error getting account from private key:', accountError);
-          throw new Error('Could not retrieve account information from private key');
+        if (accounts.length === 0) {
+          throw new Error('No accounts found for this private key');
         }
+        
+        // Use the first non-implicit account, or the first account if all are implicit
+        finalAccountId = accounts.find(acc => acc.includes('.')) || accounts[0];
+        
+        // Log the reconstructed information
+        console.log('From Private Key:');
+        console.log('Public Key:', publicKey);
+        console.log('Found Account IDs:', accounts);
+        console.log('Selected Account ID:', finalAccountId);
       }
 
       // Create wallet info object
@@ -138,7 +158,7 @@ export default function Login() {
     }
   };
 
-  // Add the utility functions
+  // Add utility functions for encryption (same as createWallet.js)
   const encryptWalletData = async (walletInfo, password) => {
     // Implementation using a proper encryption library
     // This is a placeholder - use proper encryption in production
