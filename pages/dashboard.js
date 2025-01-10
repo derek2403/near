@@ -1,118 +1,319 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { Card, CardBody, Button, Tooltip, Tabs, Tab, Image } from "@nextui-org/react";
+import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
+import * as nearAPI from "near-api-js";
+import { coins } from '../data/coins.json';
+import NativeNearDashboard from '../components/NativeNear/NativeNearDashboard';
+import ChainSignatureDashboard from '../components/ChainSignature/ChainSignatureDashboard';
+import NearIconSvg from '../public/icons/NearIcon.svg';
+import ChainIconSvg from '../public/icons/ChainIcon.svg';;
+import { setupAdapter } from 'near-ca';
+import { ethers } from 'ethers';
+import { chains } from '../data/supportedChain.json';
+
+
+const { connect, keyStores, providers } = nearAPI;
 
 export default function Dashboard() {
   const router = useRouter();
   const [walletInfo, setWalletInfo] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [balance, setBalance] = useState("0");
+  const [yoctoBalance, setYoctoBalance] = useState("0");
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [isLoadingTxns, setIsLoadingTxns] = useState(true);
+  const [isVertical, setIsVertical] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+  const [evmAddress, setEvmAddress] = useState(null);
+  const [isDerivingAddress, setIsDerivingAddress] = useState(true);
+  const [derivationError, setDerivationError] = useState('');
+  const [chainBalances, setChainBalances] = useState({});
 
   useEffect(() => {
-    const publicInfo = localStorage.getItem('publicWalletInfo');
-    if (publicInfo) {
-      setWalletInfo(JSON.parse(publicInfo));
+    const stored = localStorage.getItem('selectedTab');
+    if (stored) {
+      setIsVertical(stored === 'near');
     }
   }, []);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoginError('');
-
-    try {
-      const storedHash = localStorage.getItem('passwordHash');
-      const inputHash = await hashPassword(password);
-
-      if (inputHash === storedHash) {
-        const encryptedWallet = localStorage.getItem('encryptedWallet');
-        const decryptedWallet = await decryptWalletData(encryptedWallet, password);
-        setWalletInfo(decryptedWallet);
-        setIsLoggedIn(true);
-      } else {
-        setLoginError('Incorrect password');
-      }
-    } catch (error) {
-      setLoginError('Error accessing wallet');
-      console.error(error);
+  const handleTabChange = (key) => {
+    const isNearTab = key === "near";
+    setIsVertical(isNearTab);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedTab', key);
     }
   };
 
+  useEffect(() => {
+    const fetchWalletInfo = async () => {
+      // Check if user is logged in
+      const publicInfo = localStorage.getItem('publicWalletInfo');
+      
+      if (!publicInfo) {
+        router.push('/');
+        return;
+      }
+
+      try {
+        const parsedInfo = JSON.parse(publicInfo);
+        setWalletInfo(parsedInfo);
+
+        // Create JSON RPC provider
+        const provider = new providers.JsonRpcProvider({
+          url: "https://rpc.testnet.near.org"
+        });
+
+        // Get account balance using RPC
+        const accountState = await provider.query({
+          request_type: 'view_account',
+          finality: 'final',
+          account_id: parsedInfo.accountId
+        });
+
+        console.log('Account State:', accountState);
+        
+        // Store yoctoNEAR balance for logs
+        const yoctoNearBalance = accountState.amount;
+        console.log('Balance in yoctoNEAR:', yoctoNearBalance);
+
+        // Convert to NEAR and format to 6 decimal places
+        const nearBalance = nearAPI.utils.format.formatNearAmount(yoctoNearBalance);
+        const formattedBalance = Number(nearBalance).toFixed(6);
+        setBalance(formattedBalance);
+        console.log('Balance in NEAR:', formattedBalance);
+
+        // Fetch recent transactions
+        await fetchRecentTransactions(parsedInfo.accountId);
+
+      } catch (err) {
+        setError('Error loading wallet information');
+        console.error('Wallet loading error:', err);
+      }
+    };
+
+    fetchWalletInfo();
+  }, []);
+
+  const fetchRecentTransactions = async (accountId) => {
+    try {
+      setIsLoadingTxns(true);
+      const response = await fetch(
+        `https://api-testnet.nearblocks.io/v1/account/${accountId}/txns-only?per_page=25&order=desc`
+      );
+      const data = await response.json();
+      
+      if (data && data.txns) {
+        const uniqueTxns = new Map();
+        
+        data.txns.forEach(tx => {
+          if (!uniqueTxns.has(tx.transaction_hash)) {
+            uniqueTxns.set(tx.transaction_hash, {
+              transaction_hash: tx.transaction_hash,
+              signer_account_id: tx.signer_account_id,
+              receiver_account_id: tx.receiver_account_id,
+              block_timestamp: tx.block_timestamp,
+              deposit: tx.actions_agg?.deposit || "0",
+              status: tx.outcomes?.status
+            });
+          }
+        });
+        
+        const formattedTxns = Array.from(uniqueTxns.values());
+        setTransactions(formattedTxns);
+        setTotalPages(Math.ceil(formattedTxns.length / ITEMS_PER_PAGE));
+      }
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+    } finally {
+      setIsLoadingTxns(false);
+    }
+  };
+
+  const getPaginatedTransactions = () => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return transactions.slice(startIndex, endIndex);
+  };
+
+  const formatDate = (timestamp) => {
+    // Convert NEAR timestamp (nanoseconds) to milliseconds
+    const date = new Date(timestamp / 1000000);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getTransactionType = (tx, accountId) => {
+    if (tx.signer_account_id === accountId) {
+      return 'Sent';
+    }
+    return 'Received';
+  };
+
+  const getTransactionAmount = (tx) => {
+    try {
+      if (!tx.deposit) return "0";
+      const amount = nearAPI.utils.format.formatNearAmount(tx.deposit);
+      // Add minus sign if the user is the sender
+      const sign = tx.signer_account_id === walletInfo?.accountId ? '-' : '+';
+      return `${sign}${Number(amount).toFixed(2)}`;
+    } catch {
+      return "0";
+    }
+  };
+
+  const handleCopy = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  useEffect(() => {
+    const deriveEvmAddress = async () => {
+      if (!walletInfo?.accountId || evmAddress) return;
+
+      try {
+        setIsDerivingAddress(true);
+        setDerivationError('');
+
+        const derivationPath = `evm,1`;
+        const adapter = await setupAdapter({
+          accountId: walletInfo.accountId,
+          mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
+          derivationPath: derivationPath,
+        });
+
+        setEvmAddress(adapter.address);
+
+        // Fetch balances from all supported chains
+        const balances = {};
+        for (const chain of chains) {
+          try {
+            const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
+            const balance = await provider.getBalance(adapter.address);
+            balances[chain.prefix] = ethers.formatEther(balance);
+          } catch (err) {
+            console.error(`Error fetching balance for ${chain.name}:`, err);
+            balances[chain.prefix] = '0';
+          }
+        }
+        
+        setChainBalances(balances);
+
+      } catch (err) {
+        console.error('Error deriving address:', err);
+        setDerivationError('Failed to derive EVM address');
+      } finally {
+        setIsDerivingAddress(false);
+      }
+    };
+
+    deriveEvmAddress();
+  }, [walletInfo, evmAddress]);
+
+  const renderDashboard = () => {
+    const props = {
+      balance,
+      walletInfo,
+      transactions: getPaginatedTransactions(),
+      isLoadingTxns,
+      copied,
+      handleCopy,
+      formatDate,
+      getTransactionType,
+      getTransactionAmount,
+      router,
+      pagination: {
+        currentPage,
+        totalPages,
+        onPageChange: setCurrentPage
+      }
+    };
+
+    return isVertical ? 
+      <NativeNearDashboard {...props} /> : 
+      <ChainSignatureDashboard 
+        {...props}
+        evmAddress={evmAddress}
+        isDerivingAddress={isDerivingAddress}
+        derivationError={derivationError}
+        chainBalances={chainBalances}
+      />;
+  };
+
   if (!walletInfo) {
-    return (
-      <div className="min-h-screen p-8 bg-gray-50">
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8">
-          <h1 className="text-2xl font-bold mb-4">No Wallet Found</h1>
-          <p className="text-gray-600 mb-4">You need to create a wallet first.</p>
-          <button
-            onClick={() => router.push('/createWallet')}
-            className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600"
-          >
-            Create Wallet
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen p-8 bg-gray-50">
-        <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8">
-          <h1 className="text-2xl font-bold mb-4">Welcome Back</h1>
-          <p className="text-gray-600 mb-6">Enter your password to access your wallet.</p>
-          
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 border rounded"
-                placeholder="Enter your password"
-              />
-            </div>
-
-            {loginError && (
-              <p className="text-red-500 text-sm">{loginError}</p>
-            )}
-
-            <button
-              type="submit"
-              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-            >
-              Unlock
-            </button>
-          </form>
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen p-8 bg-gray-50 flex items-center justify-center">
+      <Card>
+        <CardBody>
+          {error || 'Loading...'}
+        </CardBody>
+      </Card>
+    </div>;
   }
 
   return (
     <div className="min-h-screen p-8 bg-gray-50">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8">
-        <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-        <div className="mb-4">
-          <p className="text-gray-600">Account ID: {walletInfo.accountId}</p>
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header with Tabs and Settings Button */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-6">
+            <h1 className="text-2xl font-bold">Wallet Dashboard</h1>
+            <Tabs 
+              aria-label="Wallet Mode" 
+              selectedKey={isVertical ? "near" : "chain"}
+              onSelectionChange={handleTabChange}
+              variant="bordered"
+              classNames={{
+                tabList: "gap-4",
+                cursor: "w-full bg-primary",
+                tab: "h-8 px-3",
+                tabContent: "group-data-[selected=true]:text-white"
+              }}
+            >
+              <Tab
+                key="near"
+                title={
+                  <div className="flex items-center space-x-2">
+                    <NearIconSvg className="w-4 h-4" />
+                    <span className="text-sm">Native NEAR</span>
+                  </div>
+                }
+              />
+              <Tab
+                key="chain"
+                title={
+                  <div className="flex items-center space-x-2">
+                    <ChainIconSvg className="w-4 h-4" />
+                    <span className="text-sm">Chain Signature</span>
+                  </div>
+                }
+              />
+            </Tabs>
+          </div>
+          <Button
+            isIconOnly
+            variant="light"
+            onPress={() => router.push('/settings')}
+          >
+            <Cog8ToothIcon className="h-6 w-6" />
+          </Button>
         </div>
-        {/* Add more wallet info display here */}
+
+        {/* Render appropriate dashboard based on tab selection */}
+        {renderDashboard()}
       </div>
     </div>
   );
 }
-
-// Utility functions for decryption
-const decryptWalletData = async (encryptedData, password) => {
-  // Implementation using proper decryption
-  // This is a placeholder - use proper decryption in production
-  return JSON.parse(atob(encryptedData)).data;
-};
-
-const hashPassword = async (password) => {
-  // Implementation using proper password hashing
-  // This is a placeholder - use proper hashing in production
-  return btoa(password);
-};
