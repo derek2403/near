@@ -18,6 +18,7 @@ import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/ou
 import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
+import Image from 'next/image';
 
 const { connect, keyStores } = nearAPI;
 
@@ -275,10 +276,12 @@ export default function NativeNearSend() {
                   variant="flat"
                 >
                     <div className="flex items-center gap-2">
-                      <img 
+                      <Image
                         src={selectedCoin.icon} 
                         alt={selectedCoin.label} 
-                        className="w-8 h-8 rounded-full"
+                        width={32}
+                        height={32}
+                        className="rounded-full"
                       />
                       <div>
                         <p className="font-medium">{selectedCoin.label}</p>
@@ -352,10 +355,12 @@ export default function NativeNearSend() {
                       className="p-2"
                     >
                       <div className="flex items-center gap-2">
-                        <img 
+                        <Image
                           src={coin.icon} 
                           alt={coin.label} 
-                          className="w-8 h-8 rounded-full"
+                          width={32}
+                          height={32}
+                          className="rounded-full"
                         />
                         <div>
                           <p className="font-medium">{coin.label}</p>
@@ -379,10 +384,12 @@ export default function NativeNearSend() {
                           onClose();
                         }}
                       >
-                        <img 
+                        <Image
                           src={coin.icon} 
                           alt={coin.label} 
-                          className="w-8 h-8 rounded-full"
+                          width={32}
+                          height={32}
+                          className="rounded-full"
                         />
                         <div className="flex-grow">
                           <p className="font-medium">{coin.label}</p>

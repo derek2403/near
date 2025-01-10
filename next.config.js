@@ -26,4 +26,13 @@ module.exports = {
 
     return config
   },
+  images: {
+    domains: ['your-image-domain.com'], // Add domains where your images are hosted
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
 } 

@@ -35,58 +35,57 @@ export default function CreateWallet() {
       return;
     }
 
+    const checkAccountAvailability = async () => {
+      try {
+        setIsChecking(true);
+        setError(null);
+
+        const fullAccountId = `${accountId}.testnet`;
+        console.log(`Checking availability for account: ${fullAccountId}`);
+
+        // Use NEAR RPC endpoint to check account
+        const response = await fetch('https://rpc.testnet.near.org', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 'dontcare',
+            method: 'query',
+            params: {
+              request_type: 'view_account',
+              finality: 'final',
+              account_id: fullAccountId
+            }
+          })
+        });
+
+        const data = await response.json();
+        console.log('RPC response:', data);
+
+        if (data.error && data.error.cause && data.error.cause.name === 'UNKNOWN_ACCOUNT') {
+          console.log(`Account ${fullAccountId} does not exist - IS available`);
+          setIsAvailable(true);
+        } else {
+          console.log(`Account ${fullAccountId} exists - NOT available`);
+          setIsAvailable(false);
+        }
+
+      } catch (err) {
+        console.error('Error checking account availability:', err);
+        setError(err.message);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
     const timeoutId = setTimeout(() => {
       checkAccountAvailability();
     }, 1000);
 
     return () => clearTimeout(timeoutId);
   }, [accountId]);
-
-  const checkAccountAvailability = async () => {
-    try {
-      setIsChecking(true);
-      setError(null);
-
-      const fullAccountId = `${accountId}.testnet`;
-      console.log(`Checking availability for account: ${fullAccountId}`);
-
-      // Use NEAR RPC endpoint to check account
-      const response = await fetch('https://rpc.testnet.near.org', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 'dontcare',
-          method: 'query',
-          params: {
-            request_type: 'view_account',
-            finality: 'final',
-            account_id: fullAccountId
-          }
-        })
-      });
-
-      const data = await response.json();
-      console.log('RPC response:', data);
-
-      // If we get an error about account not existing, then it's available
-      if (data.error && data.error.cause && data.error.cause.name === 'UNKNOWN_ACCOUNT') {
-        console.log(`Account ${fullAccountId} does not exist - IS available`);
-        setIsAvailable(true);
-      } else {
-        console.log(`Account ${fullAccountId} exists - NOT available`);
-        setIsAvailable(false);
-      }
-
-    } catch (err) {
-      console.error('Error checking account availability:', err);
-      setError(err.message);
-    } finally {
-      setIsChecking(false);
-    }
-  };
 
   const generateWallet = async () => {
     try {
