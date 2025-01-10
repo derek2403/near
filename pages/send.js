@@ -13,7 +13,7 @@ export default function Send() {
     if (!publicInfo) {
       router.push('/');
     }
-  }, []);
+  }, [router]);
 
   // Render the appropriate send component based on the mode query parameter
   return mode === 'chain' ? <ChainSignatureSend /> : <NativeNearSend />;
