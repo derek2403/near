@@ -39,7 +39,7 @@ export default function Settings() {
       setError('Error decrypting wallet data');
       console.error('Decryption error:', err);
     }
-  }, []);
+  }, [router]);
 
   const decryptWalletData = (encryptedData) => {
     try {
@@ -157,9 +157,9 @@ export default function Settings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Seed Phrase:</label>
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <p className="text-sm text-blue-800">
-                        This account was not created or imported (using Secret Phrase) via Nearer, so no encrypted secret phrase is currently available.
+                        This account wasn&apos;t created or imported (using Secret Phrase) via Nearer, so no encrypted secret phrase is currently available.
                         <br /><br />
-                        Rest assured, your original secret phrase should still work as a recovery method if you haven't removed it from your Near account.
+                        Rest assured, your original secret phrase should still work as a recovery method if you haven&apos;t removed it from your Near account.
                       </p>
                     </div>
                   </div>
