@@ -4,6 +4,7 @@ import CreateWallet from './createWallet';
 import Login from './login';
 import type { Page } from '../utils/navigation';
 import { navigateTo } from '../utils/navigation';
+import Dashboard from './dashboard';
 
 interface WalletInfo {
   address: string;
@@ -78,6 +79,10 @@ export default function Home() {
 
   if (currentPage === 'login') {
     return <Login />;
+  }
+
+  if (currentPage === 'dashboard') {
+    return <Dashboard />;
   }
 
   // Home page content

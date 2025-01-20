@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Wallet Extension",
+  "name": "Nearer",
   "version": "1.0.0",
-  "description": "A wallet extension",
+  "description": "An AI powered wallet built on Near Protocol",
   "action": {
     "default_popup": "index.html",
     "default_icon": {
