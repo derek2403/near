@@ -25,6 +25,10 @@ const nextConfig = {
         path: require.resolve('path-browserify'),
       }
     }
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ['@svgr/webpack'],
+    });
     return config
   }
 }

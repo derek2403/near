@@ -1,5 +1,5 @@
 {
-  "name": "near",
+  "name": "wallet-extension",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,36 +9,21 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
-    "@lottiefiles/dotlottie-react": "^0.12.0",
-    "@nextui-org/react": "^2.6.8",
-    "assert": "^2.1.0",
-    "browserify-zlib": "^0.2.0",
-    "crypto-browserify": "^3.12.1",
-    "dotenv": "^16.4.7",
-    "ethers": "^6.13.4",
-    "framer-motion": "^11.15.0",
-    "fs-extra": "^11.2.0",
-    "https-browserify": "^1.0.0",
-    "lodash": "^4.17.21",
-    "near-api-js": "^5.0.1",
-    "near-ca": "^0.7.3",
-    "near-seed-phrase": "^0.2.1",
-    "next": "14.2.20",
-    "openai": "^4.76.0",
-    "os-browserify": "^0.3.0",
-    "path-browserify": "^1.0.1",
-    "react": "^18",
-    "react-dom": "^18",
-    "stream-browserify": "^3.0.0",
-    "stream-http": "^3.2.0",
-    "url": "^0.11.4"
+    "@heroicons/react": "^2.0.18",
+    "@nextui-org/react": "^2.1.7",
+    "framer-motion": "^10.16.4",
+    "near-api-js": "^2.1.4",
+    "near-seed-phrase": "^0.2.0",
+    "next": "13.4.19",
+    "qrcode.react": "^3.1.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   },
   "devDependencies": {
-    "@svgr/webpack": "^8.1.0",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.20",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1"
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.51.0",
+    "eslint-config-next": "13.4.19",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.3"
   }
 }
