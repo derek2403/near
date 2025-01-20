@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 
-// Create icons directory
+// Create icons directory if it doesn't exist
 fs.mkdirSync(path.join(__dirname, '../out/icons'), { recursive: true })
 
 // Copy manifest.json
@@ -16,7 +16,7 @@ fs.copyFileSync(
   path.join(__dirname, '../out/background.js')
 )
 
-// Copy existing icons
+// Copy icons with error handling
 const iconFiles = ['icon16.png', 'icon48.png', 'icon128.png']
 iconFiles.forEach(filename => {
   try {
@@ -26,6 +26,6 @@ iconFiles.forEach(filename => {
     )
     console.log(`Successfully copied ${filename}`)
   } catch (err) {
-    console.warn(`Warning: Error copying ${filename}:`, err.message)
+    console.error(`Error copying ${filename}:`, err.message)  // Changed to error for better visibility
   }
 }) 
