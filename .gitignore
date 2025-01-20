@@ -5,6 +5,8 @@
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+/extensions/wallet/node_modules
+/extensions/wallet/.next
 
 # testing
 /coverage
