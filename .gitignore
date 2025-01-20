@@ -5,6 +5,8 @@
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+/extensions/wallet/node_modules
+/extensions/wallet/.next
 
 # testing
 /coverage
@@ -36,3 +38,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+/extensions/wallet/out
