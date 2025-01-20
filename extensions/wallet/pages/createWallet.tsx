@@ -71,6 +71,7 @@ export default function CreateWallet() {
       const { seedPhrase, secretKey, publicKey } = generateSeedPhrase();
       const fullAccountId = `${accountId}.testnet`;
 
+      // Initialize NEAR connection
       const connectionConfig = {
         networkId: "testnet",
         keyStore: new keyStores.InMemoryKeyStore(),
@@ -95,8 +96,16 @@ export default function CreateWallet() {
 
       setWalletInfo(newWalletInfo);
 
+      // Store the wallet info in extension storage
+      chrome.storage.local.set({ 
+        walletInfo: newWalletInfo,
+      }, () => {
+        console.log('Wallet info stored');
+      });
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
+      console.error('Create wallet error:', err);
     } finally {
       setLoading(false);
     }

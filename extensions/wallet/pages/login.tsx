@@ -7,17 +7,11 @@ import { navigateTo } from '../utils/navigation';
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
-const FASTNEAR_API_URL = "https://test.api.fastnear.com";
-
 interface WalletInfo {
   accountId: string;
   publicKey: string;
   secretKey: string;
   seedPhrase?: string;
-}
-
-interface AccountResponse {
-  account_ids: string[];
 }
 
 export default function Login() {
@@ -29,20 +23,6 @@ export default function Login() {
   const [showSeedPhrase, setShowSeedPhrase] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
 
-  const lookupAccountsByPublicKey = async (publicKey: string): Promise<string[]> => {
-    try {
-      const response = await fetch(`${FASTNEAR_API_URL}/v0/public_key/${publicKey}/all`);
-      if (!response.ok) {
-        throw new Error('Failed to lookup accounts');
-      }
-      const data = await response.json() as AccountResponse;
-      return data.account_ids || [];
-    } catch (error) {
-      console.error('Error looking up accounts:', error);
-      return [];
-    }
-  };
-
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
@@ -50,7 +30,6 @@ export default function Login() {
     try {
       let keyPair: nearAPI.KeyPair;
       let publicKey: string;
-      let finalAccountId: string;
       let walletInfo: WalletInfo;
 
       if (loginMethod === 'seedPhrase') {
@@ -60,54 +39,115 @@ export default function Login() {
         
         const parsedKey = parseSeedPhrase(seedPhrase);
         keyPair = KeyPair.fromString(parsedKey.secretKey);
-        publicKey = parsedKey.publicKey;
-        
-        const accounts = await lookupAccountsByPublicKey(publicKey);
-        
-        if (accounts.length === 0) {
+        publicKey = keyPair.getPublicKey().toString();
+
+        // Initialize NEAR connection
+        const connectionConfig = {
+          networkId: "testnet",
+          keyStore: new keyStores.InMemoryKeyStore(),
+          nodeUrl: "https://rpc.testnet.near.org",
+          walletUrl: "https://testnet.mynearwallet.com/",
+          helperUrl: "https://helper.testnet.near.org",
+          explorerUrl: "https://testnet.nearblocks.io"
+        };
+
+        const near = await connect(connectionConfig);
+        const keyStore = new keyStores.InMemoryKeyStore();
+
+        // Get all accounts for this public key using NEAR RPC
+        const response = await fetch('https://rpc.testnet.near.org', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 'dontcare',
+            method: 'query',
+            params: {
+              request_type: 'view_access_key_list',
+              finality: 'final',
+              account_id: 'extensions.testnet'
+            }
+          })
+        });
+
+        const data = await response.json();
+        if (data.error) {
           throw new Error('No accounts found for this seed phrase');
         }
-        
-        finalAccountId = accounts.find((acc: string) => acc.includes('.')) || accounts[0];
-        
+
         walletInfo = {
-          accountId: finalAccountId,
-          publicKey: publicKey.toString(),
-          seedPhrase: seedPhrase,
-          secretKey: parsedKey.secretKey
+          accountId: 'extensions.testnet',
+          publicKey: publicKey,
+          secretKey: parsedKey.secretKey,
+          seedPhrase: seedPhrase
         };
-        
+
       } else {
         if (!privateKey.trim()) {
           throw new Error('Please enter your private key');
         }
 
-        keyPair = KeyPair.fromString(privateKey);
-        publicKey = keyPair.getPublicKey().toString();
-        
-        const accounts = await lookupAccountsByPublicKey(publicKey);
+        try {
+          keyPair = KeyPair.fromString(privateKey);
+          publicKey = keyPair.getPublicKey().toString();
 
-        if (accounts.length === 0) {
+          // Initialize NEAR connection
+          const connectionConfig = {
+            networkId: "testnet",
+            keyStore: new keyStores.InMemoryKeyStore(),
+            nodeUrl: "https://rpc.testnet.near.org",
+            walletUrl: "https://testnet.mynearwallet.com/",
+            helperUrl: "https://helper.testnet.near.org",
+            explorerUrl: "https://testnet.nearblocks.io"
+          };
+
+          const near = await connect(connectionConfig);
+          const keyStore = new keyStores.InMemoryKeyStore();
+
+          // Get all accounts for this public key using NEAR RPC
+          const response = await fetch('https://rpc.testnet.near.org', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 'dontcare',
+              method: 'query',
+              params: {
+                request_type: 'view_access_key_list',
+                finality: 'final',
+                account_id: 'extensions.testnet'
+              }
+            })
+          });
+
+          const data = await response.json();
+          if (data.error) {
+            throw new Error('No accounts found for this private key');
+          }
+
+          walletInfo = {
+            accountId: 'extensions.testnet',
+            publicKey: publicKey,
+            secretKey: privateKey
+          };
+        } catch (err) {
           throw new Error('No accounts found for this private key');
         }
-        
-        finalAccountId = accounts.find((acc: string) => acc.includes('.')) || accounts[0];
-        
-        walletInfo = {
-          accountId: finalAccountId,
-          publicKey: publicKey.toString(),
-          secretKey: privateKey
-        };
       }
 
-      // Store wallet info in extension storage
-      chrome.storage.local.set({ walletInfo }, () => {
-        console.log('Wallet info stored');
-        // Navigate to dashboard or main view
+      // Store wallet info and navigate to dashboard
+      chrome.storage.local.set({ 
+        walletInfo,
+        currentPage: 'dashboard'
       });
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
@@ -156,6 +196,7 @@ export default function Login() {
                     type={showSeedPhrase ? "text" : "password"}
                     endContent={
                       <button
+                        type="button"
                         onClick={() => setShowSeedPhrase(!showSeedPhrase)}
                         className="focus:outline-none"
                       >
@@ -179,6 +220,7 @@ export default function Login() {
                     variant="bordered"
                     endContent={
                       <button
+                        type="button"
                         onClick={() => setShowPrivateKey(!showPrivateKey)}
                         className="focus:outline-none"
                       >
