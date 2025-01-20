@@ -1,10 +1,13 @@
+import { NextUIProvider } from "@nextui-org/react";
 import Header from './Header'
 
 export default function Layout({ children }) {
   return (
-    <div className="container">
-      <Header />
-      {children}
-    </div>
+    <NextUIProvider>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        {children}
+      </div>
+    </NextUIProvider>
   )
 } 

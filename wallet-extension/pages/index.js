@@ -1,7 +1,21 @@
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Head from 'next/head'
 import Layout from '../components/Layout'
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if user has a wallet
+    const publicInfo = localStorage.getItem('publicWalletInfo');
+    if (publicInfo) {
+      router.push('/dashboard');
+    } else {
+      router.push('/login');
+    }
+  }, [router]);
+
   return (
     <Layout>
       <Head>
