@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import Head from 'next/head'
-import Layout from '../components/Layout'
+import Layout from '../components/Layout';
+import Card from '../components/ui/Card';
 
 export default function Home() {
   const router = useRouter();
@@ -18,13 +18,9 @@ export default function Home() {
 
   return (
     <Layout>
-      <Head>
-        <title>Wallet Extension</title>
-        <meta name="description" content="Web3 wallet extension" />
-      </Head>
-      <main>
-        <h1>Welcome to Wallet Extension</h1>
-      </main>
+      <Card className="flex items-center justify-center min-h-[500px]">
+        <p className="text-gray-600">Loading...</p>
+      </Card>
     </Layout>
-  )
+  );
 } 

@@ -1,29 +1,87 @@
-import { useState, useEffect } from 'react';
-import * as nearAPI from "near-api-js";
-import { generateSeedPhrase } from "near-seed-phrase";
-import { EyeIcon, EyeSlashIcon, ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
+import { ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import Layout from '../components/Layout';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 import CreatePassword from '../components/CreatePassword';
-import { useDisclosure } from '@nextui-org/react';
-import { Input, Button, Card, CardBody, Spinner } from "@nextui-org/react";
-
-const { connect, keyStores, KeyPair } = nearAPI;
 
 export default function CreateWallet() {
-  // Keep most of the existing state and logic from the original createWallet.js
-  // Just update the UI to fit extension dimensions
+  const router = useRouter();
+  const [seedPhrase, setSeedPhrase] = useState('');
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleCopy = async () => {
+    if (seedPhrase) {
+      await navigator.clipboard.writeText(seedPhrase);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCreateWallet = async (password) => {
+    try {
+      // Add wallet creation logic here
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   return (
-    <div className="w-[400px] h-[600px] overflow-auto bg-gray-50 p-4">
-      <Card className="w-full">
-        <CardBody className="p-6">
-          {/* Same JSX structure but with adjusted padding/margins */}
-          <h1 className="text-xl font-bold mb-3">Create New Account</h1>
-          
-          {/* Rest of the UI components with size adjustments */}
-          {/* ... */}
-        </CardBody>
+    <Layout>
+      <Card>
+        <div className="space-y-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Create New Wallet</h1>
+            <p className="text-gray-600 mt-2">Save your seed phrase securely</p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-100 rounded-lg relative">
+              <p className="text-sm break-all">{seedPhrase}</p>
+              <button
+                onClick={handleCopy}
+                className="absolute top-2 right-2"
+              >
+                {copied ? (
+                  <ClipboardDocumentCheckIcon className="h-4 w-4 text-green-500" />
+                ) : (
+                  <ClipboardIcon className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+
+            {error && (
+              <p className="text-red-500 text-sm">{error}</p>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => router.push('/login')}
+              >
+                Back
+              </Button>
+              <Button
+                onClick={() => setShowCreatePassword(true)}
+                className="flex-1"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        </div>
       </Card>
-    </div>
+
+      <CreatePassword
+        isOpen={showCreatePassword}
+        onClose={() => setShowCreatePassword(false)}
+        onSubmit={handleCreateWallet}
+        error={error}
+      />
+    </Layout>
   );
 } 

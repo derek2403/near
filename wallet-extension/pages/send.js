@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { Card, CardBody, Input, Button } from "@nextui-org/react";
 import * as nearAPI from "near-api-js";
+import Layout from '../components/Layout';
+import Card from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
 
 export default function Send() {
   const router = useRouter();
@@ -26,51 +29,47 @@ export default function Send() {
   };
 
   return (
-    <div className="w-[400px] h-[600px] overflow-auto bg-gray-50 p-4">
-      <Card className="w-full">
-        <CardBody className="p-6">
-          <h1 className="text-xl font-bold mb-4">Send NEAR</h1>
+    <Layout>
+      <Card>
+        <h1 className="text-xl font-bold mb-4">Send NEAR</h1>
+        
+        <div className="space-y-4">
+          <Input
+            label="Recipient Address"
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            placeholder="account.testnet"
+          />
           
-          <div className="space-y-4">
-            <Input
-              label="Recipient Address"
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              placeholder="account.testnet"
-            />
-            
-            <Input
-              label="Amount (NEAR)"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              type="number"
-              min="0"
-              step="0.1"
-            />
+          <Input
+            label="Amount (NEAR)"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            type="number"
+            min="0"
+            step="0.1"
+          />
 
-            {error && (
-              <p className="text-danger text-sm">{error}</p>
-            )}
+          {error && (
+            <p className="text-red-500 text-sm">{error}</p>
+          )}
 
-            <div className="flex gap-2">
-              <Button
-                color="danger"
-                variant="light"
-                onPress={() => router.push('/dashboard')}
-              >
-                Cancel
-              </Button>
-              <Button
-                color="primary"
-                onPress={handleSend}
-                isLoading={loading}
-              >
-                Send
-              </Button>
-            </div>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => router.push('/dashboard')}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSend}
+              disabled={loading}
+            >
+              Send
+            </Button>
           </div>
-        </CardBody>
+        </div>
       </Card>
-    </div>
+    </Layout>
   );
 } 
