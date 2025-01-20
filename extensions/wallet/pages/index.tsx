@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Input, Button, Card, CardBody } from "@nextui-org/react";
+import CreateWallet from './createWallet';
+import Login from './login';
+import type { Page } from '../utils/navigation';
+import { navigateTo } from '../utils/navigation';
 
 interface WalletInfo {
   address: string;
@@ -8,10 +12,33 @@ interface WalletInfo {
 }
 
 export default function Home() {
+  const [currentPage, setCurrentPage] = useState<Page>('home');
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  useEffect(() => {
+    // Listen for page changes
+    chrome.storage.local.get(['currentPage'], (result) => {
+      if (result.currentPage) {
+        setCurrentPage(result.currentPage);
+      }
+    });
+
+    // Add storage change listener
+    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+      if (changes.currentPage) {
+        setCurrentPage(changes.currentPage.newValue);
+      }
+    };
+
+    chrome.storage.local.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.storage.local.onChanged.removeListener(handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     const publicInfo = localStorage.getItem('publicWalletInfo');
@@ -44,112 +71,44 @@ export default function Home() {
     }
   };
 
-  const navigateTo = (path: string) => {
-    // For now, we'll just console.log since we don't have router in extension
-    console.log('Navigate to:', path);
-  };
-
-  if (!walletInfo) {
-    return (
-      <div className="min-h-[600px] p-8 bg-gray-50">
-        <Card className="max-w-md mx-auto">
-          <CardBody className="p-8">
-            <h1 className="text-2xl font-bold mb-4">Welcome to NEAR Wallet</h1>
-            <p className="text-gray-600 mb-6">To get started, create your first NEAR wallet.</p>
-            
-            <Button
-              onPress={() => navigateTo('/createWallet')}
-              color="primary"
-              className="w-full"
-              size="lg"
-            >
-              Create New Wallet
-            </Button>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Already have a wallet?{' '}
-                <Button
-                  onPress={() => navigateTo('/login')}
-                  variant="light"
-                  color="primary"
-                  className="p-0"
-                >
-                  Login here
-                </Button>
-              </p>
-            </div>
-          </CardBody>
-        </Card>
-      </div>
-    );
+  // Render different pages based on currentPage
+  if (currentPage === 'createWallet') {
+    return <CreateWallet />;
   }
 
+  if (currentPage === 'login') {
+    return <Login />;
+  }
+
+  // Home page content
   return (
     <div className="min-h-[600px] p-8 bg-gray-50">
       <Card className="max-w-md mx-auto">
         <CardBody className="p-8">
-          <h1 className="text-2xl font-bold mb-4">Welcome Back</h1>
-          <p className="text-gray-600 mb-6">Enter your password to access your wallet.</p>
+          <h1 className="text-2xl font-bold mb-4">Welcome to NEAR Wallet</h1>
+          <p className="text-gray-600 mb-6">To get started, create your first NEAR wallet.</p>
           
-          <form onSubmit={handleLogin} className="space-y-6">
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              variant="bordered"
-              className="max-w-full"
-              required
-            />
+          <Button
+            onPress={() => navigateTo('createWallet')}
+            color="primary"
+            className="w-full"
+            size="lg"
+          >
+            Create New Wallet
+          </Button>
 
-            {loginError && (
-              <Card className="bg-danger-50 border-none">
-                <CardBody className="text-danger py-2">
-                  {loginError}
-                </CardBody>
-              </Card>
-            )}
-
-            <Button
-              type="submit"
-              color="primary"
-              className="w-full"
-              size="lg"
-            >
-              Unlock
-            </Button>
-          </form>
-
-          <div className="mt-6 space-y-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">or</span>
-              </div>
-            </div>
-
-            <Button
-              onPress={() => navigateTo('/login')}
-              variant="bordered"
-              color="primary"
-              className="w-full"
-              size="lg"
-            >
-              Login to Different Wallet
-            </Button>
-
-            <Button
-              onPress={() => navigateTo('/createWallet')}
-              variant="light"
-              color="primary"
-              className="w-full"
-              size="lg"
-            >
-              Create New Wallet
-            </Button>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Already have a wallet?{' '}
+              <Button
+                onPress={() => navigateTo('login')}
+                variant="light"
+                color="primary"
+                className="p-0"
+              >
+                Login here
+              </Button>
+            </p>
           </div>
         </CardBody>
       </Card>
