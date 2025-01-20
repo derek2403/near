@@ -9,11 +9,7 @@ const nextConfig = {
   assetPrefix: '',
   basePath: '',
   distDir: 'out',
-  // Disable server-side features
-  experimental: {
-    appDir: false,
-  },
-  // Ensure we're building for static output
+  // Remove experimental config
   webpack: (config) => {
     config.resolve.fallback = { fs: false, path: false };
     return config;
