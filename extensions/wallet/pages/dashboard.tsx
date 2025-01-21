@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Card, CardBody, Tabs, Tab } from "@nextui-org/react";
+import { Button, Card, CardBody } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { navigateTo, Page } from '../utils/navigation';
@@ -36,6 +36,31 @@ interface AccountState {
   block_hash: string;
 }
 
+interface BaseProps {
+  balance: string;
+  walletInfo: WalletInfo | null;
+  transactions: Transaction[];
+  isLoadingTxns: boolean;
+  copied: boolean;
+  handleCopy: (text: string) => Promise<void>;
+  formatDate: (timestamp: number) => string;
+  getTransactionType: (tx: Transaction) => string;
+  getTransactionAmount: (tx: Transaction) => string;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  };
+  navigateTo: (page: Page | `${Page}?${string}`) => void;
+}
+
+interface ChainSignatureProps extends BaseProps {
+  evmAddress: string;
+  isDerivingAddress: boolean;
+  derivationError: string;
+  chainBalances: Record<string, string>;
+}
+
 export default function Dashboard() {
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [balance, setBalance] = useState("0");
@@ -46,7 +71,11 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 5;
-  const [isVertical, setIsVertical] = useState(true);
+  const [mode, setMode] = useState<'native' | 'chain'>('native');
+  const [evmAddress, setEvmAddress] = useState('');
+  const [isDerivingAddress, setIsDerivingAddress] = useState(false);
+  const [derivationError, setDerivationError] = useState('');
+  const [chainBalances, setChainBalances] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchWalletInfo = async () => {
@@ -94,13 +123,6 @@ export default function Dashboard() {
     };
 
     fetchWalletInfo();
-  }, []);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('selectedTab');
-    if (stored) {
-      setIsVertical(stored === 'near');
-    }
   }, []);
 
   const fetchRecentTransactions = async (accountId: string) => {
@@ -189,19 +211,11 @@ export default function Dashboard() {
     });
   };
 
-  const handleTabChange = (key: "near" | "chain") => {
-    const isNearTab = key === "near";
-    setIsVertical(isNearTab);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('selectedTab', key);
-    }
-  };
-
   const renderDashboard = () => {
-    const props = {
+    const baseProps: BaseProps = {
       balance,
       walletInfo,
-      transactions: getPaginatedTransactions(),
+      transactions,
       isLoadingTxns,
       copied,
       handleCopy,
@@ -213,18 +227,22 @@ export default function Dashboard() {
         totalPages,
         onPageChange: setCurrentPage
       },
-      navigateTo: (page: Page | `${Page}?${string}`) => navigateTo(page)
+      navigateTo
     };
 
-    return isVertical ? 
-      <NativeNearDashboard {...props} /> : 
-      <ChainSignatureDashboard 
-        {...props}
-        evmAddress="0x..."
-        isDerivingAddress={false}
-        derivationError=""
-        chainBalances={{}}
-      />;
+    if (mode === 'native') {
+      return <NativeNearDashboard {...baseProps} />;
+    }
+
+    const chainProps: ChainSignatureProps = {
+      ...baseProps,
+      evmAddress,
+      isDerivingAddress,
+      derivationError,
+      chainBalances
+    };
+
+    return <ChainSignatureDashboard {...chainProps} />;
   };
 
   if (!walletInfo) {
@@ -241,45 +259,40 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-[600px] p-4 bg-gray-50">
-      <div className="space-y-4">
-        {/* Header with Tabs */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold">Wallet Dashboard</h1>
-            <Tabs 
-              aria-label="Wallet Mode"
-              selectedKey={isVertical ? "near" : "chain"}
-              onSelectionChange={(key) => handleTabChange(key as "near" | "chain")}
-              variant="bordered"
-              classNames={{
-                tabList: "gap-4",
-                cursor: "w-full bg-primary",
-                tab: "h-8 px-3",
-                tabContent: "group-data-[selected=true]:text-white"
-              }}
-            >
-              <Tab
-                key="near"
-                title="Native NEAR"
-              />
-              <Tab
-                key="chain"
-                title="Chain Signature"
-              />
-            </Tabs>
-          </div>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-xl font-bold">Wallet</h1>
+        <Button
+          isIconOnly
+          variant="light"
+          onPress={() => navigateTo('settings')}
+        >
+          <Cog8ToothIcon className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Toggle Bar */}
+      <div className="flex justify-center mb-6">
+        <div className="bg-default-100 rounded-lg p-1 flex">
           <Button
-            isIconOnly
-            variant="light"
-            onPress={() => navigateTo('settings')}
+            className={`flex-1 ${mode === 'native' ? 'bg-primary text-white' : 'bg-transparent'}`}
+            variant={mode === 'native' ? 'solid' : 'light'}
+            onPress={() => setMode('native')}
           >
-            <Cog8ToothIcon className="h-5 w-5" />
+            Native NEAR
+          </Button>
+          <Button
+            className={`flex-1 ${mode === 'chain' ? 'bg-primary text-white' : 'bg-transparent'}`}
+            variant={mode === 'chain' ? 'solid' : 'light'}
+            onPress={() => setMode('chain')}
+          >
+            Chain Signature
           </Button>
         </div>
-
-        {/* Render appropriate dashboard based on tab selection */}
-        {renderDashboard()}
       </div>
+
+      {/* Dashboard Content */}
+      {renderDashboard()}
     </div>
   );
 } 
