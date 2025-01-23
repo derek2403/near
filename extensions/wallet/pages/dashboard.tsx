@@ -258,41 +258,54 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-[600px] p-4 bg-gray-50">
+    <div className="min-h-[600px] p-6 bg-gray-50 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl font-bold">Wallet</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Wallet</h1>
         <Button
           isIconOnly
           variant="light"
           onPress={() => navigateTo('settings')}
+          className="hover:bg-gray-100"
         >
-          <Cog8ToothIcon className="h-5 w-5" />
+          <Cog8ToothIcon className="h-6 w-6 text-gray-600" />
         </Button>
       </div>
 
       {/* Toggle Bar */}
-      <div className="flex justify-center mb-6">
-        <div className="bg-default-100 rounded-lg p-1 flex">
+      <div className="flex justify-center">
+        <div className="bg-default-100 rounded-full p-1.5 flex w-full max-w-md shadow-sm">
           <Button
-            className={`flex-1 ${mode === 'native' ? 'bg-primary text-white' : 'bg-transparent'}`}
+            className={`flex-1 rounded-full transition-all duration-200 ${
+              mode === 'native' 
+                ? 'bg-primary text-white shadow-sm' 
+                : 'bg-transparent hover:bg-gray-100'
+            }`}
             variant={mode === 'native' ? 'solid' : 'light'}
             onPress={() => setMode('native')}
+            size="lg"
           >
             Native NEAR
           </Button>
           <Button
-            className={`flex-1 ${mode === 'chain' ? 'bg-primary text-white' : 'bg-transparent'}`}
+            className={`flex-1 rounded-full transition-all duration-200 ${
+              mode === 'chain' 
+                ? 'bg-primary text-white shadow-sm' 
+                : 'bg-transparent hover:bg-gray-100'
+            }`}
             variant={mode === 'chain' ? 'solid' : 'light'}
             onPress={() => setMode('chain')}
+            size="lg"
           >
             Chain Signature
           </Button>
         </div>
       </div>
 
-      {/* Dashboard Content */}
-      {renderDashboard()}
+      {/* Dashboard Content with proper spacing */}
+      <div className="space-y-6">
+        {renderDashboard()}
+      </div>
     </div>
   );
 } 
