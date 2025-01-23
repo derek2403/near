@@ -41,6 +41,15 @@ export default function Login() {
     }
   };
 
+  const validateSeedPhrase = (phrase) => {
+    const words = phrase.trim().split(/\s+/);
+    return words.length === 12;
+  };
+
+  const validatePrivateKey = (key) => {
+    return /^ed25519:[A-Za-z0-9]{88}$/.test(key);
+  };
+
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
@@ -55,9 +64,13 @@ export default function Login() {
         if (!seedPhrase.trim()) {
           throw new Error('Please enter your seed phrase');
         }
+
+        // Validate seed phrase length
+        if (!validateSeedPhrase(seedPhrase)) {
+          throw new Error('Invalid seed phrase. Must be 12 words');
+        }
         
         // Parse seed phrase and get key pair
-        console.log('Processing seed phrase...');
         const parsedKey = parseSeedPhrase(seedPhrase);
         keyPair = KeyPair.fromString(parsedKey.secretKey);
         publicKey = parsedKey.publicKey;
@@ -91,6 +104,11 @@ export default function Login() {
       } else {
         if (!privateKey.trim()) {
           throw new Error('Please enter your private key');
+        }
+
+        // Validate private key format
+        if (!validatePrivateKey(privateKey)) {
+          throw new Error('Invalid private key format. Must be in format: ed25519:XXXXXXX');
         }
 
         // Create key pair from private key
@@ -141,7 +159,6 @@ export default function Login() {
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Failed to login. Please check your credentials and try again.');
-    } finally {
       setLoading(false);
     }
   };
