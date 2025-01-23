@@ -22,26 +22,6 @@ export default function NativeNearDashboard({
     return { status: '', className: '' };
   };
 
-  // Add detailed transaction logging
-  const logTransactionDetails = (tx) => {
-    console.group(`Transaction ${tx.transaction_hash}`);
-    console.log('Full Transaction:', tx);
-    console.log('Transaction Type:', getTransactionType(tx, walletInfo.accountId));
-    console.log('Amount:', getTransactionAmount(tx));
-    console.log('Timestamp:', tx.block_timestamp);
-    console.log('Status:', tx.status);
-    if (tx.receipts) {
-      console.log('Receipts:', tx.receipts);
-    }
-    if (tx.actions) {
-      console.log('Actions:', tx.actions);
-    }
-    if (tx.outcomes) {
-      console.log('Outcomes:', tx.outcomes);
-    }
-    console.groupEnd();
-  };
-
   return (
     <>
       {/* Main Balance Card */}
@@ -113,7 +93,6 @@ export default function NativeNearDashboard({
               {/* Transaction list */}
               <div className="space-y-3">
                 {transactions.map((tx) => {
-                  logTransactionDetails(tx);
                   const txStatus = getTransactionStatus(tx);
                   const isFailed = txStatus.status === 'Failed';
                   
