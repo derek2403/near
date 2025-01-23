@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Button, Card, CardBody } from "@nextui-org/react";
+import { Button, Card, CardBody, Tabs, Tab } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
-import { navigateTo, Page } from '../utils/navigation';
+import { navigateTo } from '../utils/navigation';
 import NativeNearDashboard from '../components/NativeNear/NativeNearDashboard';
 import ChainSignatureDashboard from '../components/ChainSignature/ChainSignatureDashboard';
-import { Selection } from "@nextui-org/react";
+import { setupAdapter } from 'near-ca';
+import { ethers } from 'ethers';
+import { chains } from '../data/supportedChain.json';
+import NearIcon from '../public/icons/near.svg';
+import ChainIcon from '../public/icons/chain.svg';
 
 const { providers } = nearAPI;
 
@@ -36,31 +40,6 @@ interface AccountState {
   block_hash: string;
 }
 
-interface BaseProps {
-  balance: string;
-  walletInfo: WalletInfo | null;
-  transactions: Transaction[];
-  isLoadingTxns: boolean;
-  copied: boolean;
-  handleCopy: (text: string) => Promise<void>;
-  formatDate: (timestamp: number) => string;
-  getTransactionType: (tx: Transaction) => string;
-  getTransactionAmount: (tx: Transaction) => string;
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
-  };
-  navigateTo: (page: Page | `${Page}?${string}`) => void;
-}
-
-interface ChainSignatureProps extends BaseProps {
-  evmAddress: string;
-  isDerivingAddress: boolean;
-  derivationError: string;
-  chainBalances: Record<string, string>;
-}
-
 export default function Dashboard() {
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [balance, setBalance] = useState("0");
@@ -77,45 +56,56 @@ export default function Dashboard() {
   const [derivationError, setDerivationError] = useState('');
   const [chainBalances, setChainBalances] = useState<Record<string, string>>({});
 
+  // Load saved mode preference
+  useEffect(() => {
+    chrome.storage.local.get(['dashboardMode'], (result) => {
+      if (result.dashboardMode) {
+        setMode(result.dashboardMode);
+      }
+    });
+  }, []);
+
+  // Save mode preference when changed
+  useEffect(() => {
+    chrome.storage.local.set({ dashboardMode: mode });
+  }, [mode]);
+
   useEffect(() => {
     const fetchWalletInfo = async () => {
       try {
-        // Get wallet info from extension storage
-        chrome.storage.local.get(['walletInfo'], async (result) => {
-          if (!result.walletInfo) {
-            navigateTo('home');
-            return;
-          }
+        const result = await chrome.storage.local.get(['walletInfo']);
+        if (!result.walletInfo) {
+          navigateTo('home');
+          return;
+        }
 
-          setWalletInfo(result.walletInfo);
+        setWalletInfo(result.walletInfo);
 
-          // Create JSON RPC provider
-          const provider = new providers.JsonRpcProvider({
-            url: "https://rpc.testnet.near.org"
-          });
-
-          // Get account balance using RPC
-          const accountState = await provider.query({
-            request_type: 'view_account',
-            finality: 'final',
-            account_id: result.walletInfo.accountId
-          }) as AccountState; // Type assertion here
-
-          console.log('Account State:', accountState);
-          
-          // Store yoctoNEAR balance for logs
-          const yoctoNearBalance = accountState.amount;
-          console.log('Balance in yoctoNEAR:', yoctoNearBalance);
-
-          // Convert to NEAR and format to 6 decimal places
-          const nearBalance = nearAPI.utils.format.formatNearAmount(yoctoNearBalance);
-          const formattedBalance = Number(nearBalance).toFixed(6);
-          setBalance(formattedBalance);
-          console.log('Balance in NEAR:', formattedBalance);
-
-          // Fetch recent transactions
-          await fetchRecentTransactions(result.walletInfo.accountId);
+        // Create JSON RPC provider
+        const provider = new providers.JsonRpcProvider({
+          url: "https://rpc.testnet.near.org"
         });
+
+        // Get account balance
+        const accountState = await provider.query({
+          request_type: 'view_account',
+          finality: 'final',
+          account_id: result.walletInfo.accountId
+        }) as AccountState;
+
+        // Convert and format balance
+        const nearBalance = nearAPI.utils.format.formatNearAmount(accountState.amount);
+        const formattedBalance = Number(nearBalance).toFixed(6);
+        setBalance(formattedBalance);
+
+        // Fetch transactions
+        await fetchRecentTransactions(result.walletInfo.accountId);
+
+        // If in chain mode, derive EVM address
+        if (mode === 'chain') {
+          await deriveEvmAddress(result.walletInfo.accountId);
+        }
+
       } catch (err) {
         setError('Error loading wallet information');
         console.error('Wallet loading error:', err);
@@ -123,7 +113,44 @@ export default function Dashboard() {
     };
 
     fetchWalletInfo();
-  }, []);
+  }, [mode]);
+
+  const deriveEvmAddress = async (accountId: string) => {
+    try {
+      setIsDerivingAddress(true);
+      setDerivationError('');
+
+      const derivationPath = `evm,1`;
+      const adapter = await setupAdapter({
+        accountId,
+        mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
+        derivationPath,
+      });
+
+      setEvmAddress(adapter.address);
+
+      // Fetch balances from supported chains
+      const balances: Record<string, string> = {};
+      for (const chain of chains) {
+        try {
+          const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
+          const balance = await provider.getBalance(adapter.address);
+          balances[chain.prefix] = ethers.formatEther(balance);
+        } catch (err) {
+          console.error(`Error fetching balance for ${chain.name}:`, err);
+          balances[chain.prefix] = '0';
+        }
+      }
+      
+      setChainBalances(balances);
+
+    } catch (err) {
+      console.error('Error deriving address:', err);
+      setDerivationError('Failed to derive EVM address');
+    } finally {
+      setIsDerivingAddress(false);
+    }
+  };
 
   const fetchRecentTransactions = async (accountId: string) => {
     try {
@@ -134,18 +161,11 @@ export default function Dashboard() {
       const data = await response.json();
       
       if (data && data.txns) {
-        const uniqueTxns = new Map();
+        const uniqueTxns = new Map<string, Transaction>();
         
         data.txns.forEach((tx: Transaction) => {
           if (!uniqueTxns.has(tx.transaction_hash)) {
-            uniqueTxns.set(tx.transaction_hash, {
-              transaction_hash: tx.transaction_hash,
-              signer_account_id: tx.signer_account_id,
-              receiver_account_id: tx.receiver_account_id,
-              block_timestamp: tx.block_timestamp,
-              deposit: tx.deposit,
-              status: tx.status
-            });
+            uniqueTxns.set(tx.transaction_hash, tx);
           }
         });
         
@@ -160,10 +180,14 @@ export default function Dashboard() {
     }
   };
 
-  const getPaginatedTransactions = () => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return transactions.slice(startIndex, endIndex);
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   const formatDate = (timestamp: number) => {
@@ -178,10 +202,7 @@ export default function Dashboard() {
   };
 
   const getTransactionType = (tx: Transaction) => {
-    if (tx.signer_account_id === walletInfo?.accountId) {
-      return 'Sent';
-    }
-    return 'Received';
+    return tx.signer_account_id === walletInfo?.accountId ? 'Sent' : 'Received';
   };
 
   const getTransactionAmount = (tx: Transaction) => {
@@ -193,56 +214,6 @@ export default function Dashboard() {
     } catch {
       return "0";
     }
-  };
-
-  const handleCopy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
-
-  const handleLogout = () => {
-    chrome.storage.local.remove(['walletInfo'], () => {
-      navigateTo('home');
-    });
-  };
-
-  const renderDashboard = () => {
-    const baseProps: BaseProps = {
-      balance,
-      walletInfo,
-      transactions,
-      isLoadingTxns,
-      copied,
-      handleCopy,
-      formatDate,
-      getTransactionType,
-      getTransactionAmount,
-      pagination: {
-        currentPage,
-        totalPages,
-        onPageChange: setCurrentPage
-      },
-      navigateTo
-    };
-
-    if (mode === 'native') {
-      return <NativeNearDashboard {...baseProps} />;
-    }
-
-    const chainProps: ChainSignatureProps = {
-      ...baseProps,
-      evmAddress,
-      isDerivingAddress,
-      derivationError,
-      chainBalances
-    };
-
-    return <ChainSignatureDashboard {...chainProps} />;
   };
 
   if (!walletInfo) {
@@ -257,54 +228,85 @@ export default function Dashboard() {
     );
   }
 
+  const baseProps = {
+    balance,
+    walletInfo,
+    transactions: transactions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE),
+    isLoadingTxns,
+    copied,
+    handleCopy,
+    formatDate,
+    getTransactionType,
+    getTransactionAmount,
+    pagination: {
+      currentPage,
+      totalPages,
+      onPageChange: setCurrentPage
+    },
+    navigateTo
+  };
+
   return (
     <div className="min-h-[600px] p-6 bg-gray-50 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Wallet</h1>
+        <div className="flex items-center gap-6">
+          <h1 className="text-xl font-bold">Wallet</h1>
+          <Tabs 
+            selectedKey={mode}
+            onSelectionChange={(key) => setMode(key as 'native' | 'chain')}
+            variant="bordered"
+            size="sm"
+            classNames={{
+              tabList: "gap-4",
+              cursor: "w-full bg-primary",
+              tab: "h-8 px-3",
+              tabContent: "group-data-[selected=true]:text-white"
+            }}
+          >
+            <Tab
+              key="native"
+              title={
+                <div className="flex items-center space-x-2">
+                  <NearIcon className="w-4 h-4" />
+                  <span className="text-sm">Native NEAR</span>
+                </div>
+              }
+            />
+            <Tab
+              key="chain"
+              title={
+                <div className="flex items-center space-x-2">
+                  <ChainIcon className="w-4 h-4" />
+                  <span className="text-sm">Chain Signature</span>
+                </div>
+              }
+            />
+          </Tabs>
+        </div>
         <Button
           isIconOnly
           variant="light"
           onPress={() => navigateTo('settings')}
           className="hover:bg-gray-100"
         >
-          <Cog8ToothIcon className="h-6 w-6 text-gray-600" />
+          <Cog8ToothIcon className="h-5 w-5 text-gray-600" />
         </Button>
       </div>
 
-      {/* Toggle Bar */}
-      <div className="flex justify-center">
-        <div className="bg-default-100 rounded-full p-1.5 flex w-full max-w-md shadow-sm">
-          <Button
-            className={`flex-1 rounded-full transition-all duration-200 ${
-              mode === 'native' 
-                ? 'bg-primary text-white shadow-sm' 
-                : 'bg-transparent hover:bg-gray-100'
-            }`}
-            variant={mode === 'native' ? 'solid' : 'light'}
-            onPress={() => setMode('native')}
-            size="lg"
-          >
-            Native NEAR
-          </Button>
-          <Button
-            className={`flex-1 rounded-full transition-all duration-200 ${
-              mode === 'chain' 
-                ? 'bg-primary text-white shadow-sm' 
-                : 'bg-transparent hover:bg-gray-100'
-            }`}
-            variant={mode === 'chain' ? 'solid' : 'light'}
-            onPress={() => setMode('chain')}
-            size="lg"
-          >
-            Chain Signature
-          </Button>
-        </div>
-      </div>
-
-      {/* Dashboard Content with proper spacing */}
+      {/* Dashboard Content */}
       <div className="space-y-6">
-        {renderDashboard()}
+        {mode === 'native' ? (
+          <NativeNearDashboard {...baseProps} />
+        ) : (
+          <ChainSignatureDashboard 
+            {...baseProps}
+            evmAddress={evmAddress}
+            isDerivingAddress={isDerivingAddress}
+            derivationError={derivationError}
+            chainBalances={chainBalances}
+          />
+        )}
       </div>
     </div>
   );
