@@ -19,6 +19,7 @@ import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
 import { chains } from '../../data/supportedChain.json';
+import Image from 'next/image';
 
 const { connect, keyStores } = nearAPI;
 
@@ -294,16 +295,19 @@ export default function ChainSignatureSend() {
                     <div className="flex items-center gap-2">
                       <div className="relative">
                         {/* Main Chain Logo */}
-                        <img 
+                        <Image
                           src={selectedChain.logo} 
                           alt={selectedChain.name} 
-                          className="w-10 h-10"
+                          width={40}
+                          height={40}
                         />
                         {/* Token Logo - Smaller and overlapping, removed border-2 border-white */}
-                        <img 
+                        <Image 
                           src={selectedCoin.icon} 
                           alt={selectedCoin.label} 
                           className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
+                          width={24}
+                          height={24}
                         />
                       </div>
                       <div>
@@ -380,10 +384,11 @@ export default function ChainSignatureSend() {
                           }`}
                           onClick={() => setSelectedChain(chain)}
                         >
-                          <img 
+                          <Image 
                             src={chain.logo} 
                             alt={chain.name} 
-                            className="w-8 h-8"
+                            width={40}
+                            height={40}
                           />
                           <div>
                             <p className="font-medium">{chain.name}</p>
@@ -412,10 +417,12 @@ export default function ChainSignatureSend() {
                         {(coin) => (
                           <AutocompleteItem key={coin.key} className="p-2">
                             <div className="flex items-center gap-2">
-                              <img 
+                              <Image 
                                 src={coin.icon} 
                                 alt={coin.label} 
                                 className="w-8 h-8 rounded-full"
+                                width={32}
+                                height={32}
                               />
                               <div>
                                 <p className="font-medium">{coin.label}</p>
@@ -441,10 +448,12 @@ export default function ChainSignatureSend() {
                                 onClose();
                               }}
                             >
-                              <img 
+                              <Image 
                                 src={coin.icon} 
                                 alt={coin.label} 
                                 className="w-8 h-8 rounded-full"
+                                width={32}
+                                height={32}
                               />
                               <div className="flex-grow">
                                 <p className="font-medium">{coin.label}</p>

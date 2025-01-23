@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import { 
   Card, 
   CardBody, 
@@ -19,30 +18,38 @@ import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
 import Image from 'next/image';
+import { navigateTo } from '../../utils/navigation';
 
 const { connect, keyStores } = nearAPI;
 
+interface Coin {
+  key: string;
+  label: string;
+  symbol: string;
+  icon: string;
+  description: string;
+}
+
 export default function NativeNearSend() {
-  const router = useRouter();
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
   const [selectedCoin, setSelectedCoin] = useState(coins[0]);
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [txHash, setTxHash] = useState('');
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleAmountChange = (e) => {
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setAmount(value);
     }
   };
 
-  const onSubmit = async (e) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsError(false);
@@ -50,16 +57,13 @@ export default function NativeNearSend() {
     setIsLoading(true);
     
     try {
-      // Get sender's wallet info from localStorage
-      const publicInfo = localStorage.getItem('publicWalletInfo');
-      const encryptedWallet = localStorage.getItem('encryptedWallet');
-      
-      if (!publicInfo || !encryptedWallet) {
+      // Get wallet info from Chrome storage
+      const result = await chrome.storage.local.get(['walletInfo']);
+      if (!result.walletInfo) {
         throw new Error('Wallet information not found');
       }
 
-      const parsedInfo = JSON.parse(publicInfo);
-      const decryptedWallet = JSON.parse(atob(encryptedWallet));
+      const walletInfo = result.walletInfo;
       
       // Setup connection to NEAR
       const connectionConfig = {
@@ -72,19 +76,19 @@ export default function NativeNearSend() {
       const near = await connect(connectionConfig);
       
       // Create keyPair from private key
-      const keyPair = nearAPI.utils.KeyPair.fromString(decryptedWallet.data.secretKey);
-      await connectionConfig.keyStore.setKey("testnet", parsedInfo.accountId, keyPair);
+      const keyPair = nearAPI.utils.KeyPair.fromString(walletInfo.secretKey);
+      await connectionConfig.keyStore.setKey("testnet", walletInfo.accountId, keyPair);
 
       // Get account object
-      const account = await near.account(parsedInfo.accountId);
+      const account = await near.account(walletInfo.accountId);
 
       // Convert NEAR amount to yoctoNEAR
       const yoctoAmount = nearAPI.utils.format.parseNearAmount(amount);
 
       // Send transaction
       const result = await account.sendMoney(
-        recipientAddress, // receiver account
-        yoctoAmount // amount in yoctoNEAR
+        recipientAddress,
+        yoctoAmount
       );
 
       // Get transaction hash
@@ -96,30 +100,30 @@ export default function NativeNearSend() {
 
     } catch (err) {
       console.error('Transaction error:', err);
-      setErrorMessage(err.message || 'Failed to send transaction');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to send transaction');
       setIsError(true);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getExplorerUrl = (hash) => {
+  const getExplorerUrl = (hash: string) => {
     return `https://testnet.nearblocks.io/txns/${hash}`;
   };
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
-        <div className="w-64 h-64 mb-6">
+      <div className="min-h-[600px] p-6 bg-gray-50 flex flex-col items-center justify-center">
+        <div className="w-48 h-48 mb-6">
           <DotLottieReact
             src="https://lottie.host/de3a77dc-d723-4462-a832-e2928836c922/7LKOuBzujP.lottie"
             autoplay
             loop={false}
           />
         </div>
-        <Card className="max-w-2xl w-full">
-          <CardBody className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-success mb-2">
+        <Card className="w-full">
+          <CardBody className="p-6 text-center">
+            <h2 className="text-xl font-bold text-success mb-2">
               Transaction Successful!
             </h2>
             <p className="text-gray-600 mb-4">
@@ -149,7 +153,6 @@ export default function NativeNearSend() {
               </p>
             </div>
             
-            {/* Action Buttons */}
             <div className="flex flex-col gap-2">
               <Button
                 color="primary"
@@ -167,7 +170,7 @@ export default function NativeNearSend() {
               <Button
                 color="default"
                 variant="light"
-                onPress={() => router.push('/dashboard')}
+                onPress={() => navigateTo('dashboard')}
                 className="w-full"
               >
                 Back to Dashboard
@@ -181,17 +184,17 @@ export default function NativeNearSend() {
 
   if (isError) {
     return (
-      <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
-        <div className="w-64 h-64 mb-6">
+      <div className="min-h-[600px] p-6 bg-gray-50 flex flex-col items-center justify-center">
+        <div className="w-48 h-48 mb-6">
           <DotLottieReact
             src="https://lottie.host/f971bfe3-8fe1-4deb-affa-1c78011f4daa/VNtlmMxARH.lottie"
             autoplay
             loop={false}
           />
         </div>
-        <Card className="max-w-2xl w-full">
-          <CardBody className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-danger mb-2">
+        <Card className="w-full">
+          <CardBody className="p-6 text-center">
+            <h2 className="text-xl font-bold text-danger mb-2">
               Transaction Failed
             </h2>
             <p className="text-gray-600 mb-4">
@@ -213,7 +216,6 @@ export default function NativeNearSend() {
               </div>
             </div>
             
-            {/* Action Buttons */}
             <div className="flex flex-col gap-2">
               <Button
                 color="primary"
@@ -229,7 +231,7 @@ export default function NativeNearSend() {
               <Button
                 color="default"
                 variant="light"
-                onPress={() => router.push('/dashboard')}
+                onPress={() => navigateTo('dashboard')}
                 className="w-full"
               >
                 Back to Dashboard
@@ -242,27 +244,27 @@ export default function NativeNearSend() {
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <Card className="max-w-md mx-auto">
-        <CardBody className="p-8">
+    <div className="min-h-[600px] p-6 bg-gray-50">
+      <Card className="w-full">
+        <CardBody className="p-6">
           {/* Header with Back Button */}
           <div className="flex items-center mb-6">
             <Button
               isIconOnly
               variant="light"
-              onPress={() => router.push('/dashboard')}
+              onPress={() => navigateTo('dashboard')}
               className="mr-4"
             >
               <ArrowLeftIcon className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Send</h1>
+            <h1 className="text-xl font-bold">Send</h1>
           </div>
 
           <form onSubmit={onSubmit} className="space-y-6">
             {/* Amount Input with Coin Selector */}
             <div className="relative">
               <Input
-              isRequired
+                isRequired
                 type="text"
                 size="lg"
                 label="Amount"
@@ -271,10 +273,10 @@ export default function NativeNearSend() {
                 className="text-3xl"
                 endContent={
                   <Button
-                  className="min-w-fit h-full" // Changed to h-full to match input height
-                  onPress={onOpen}
-                  variant="flat"
-                >
+                    className="min-w-fit h-full"
+                    onPress={onOpen}
+                    variant="flat"
+                  >
                     <div className="flex items-center gap-2">
                       <Image
                         src={selectedCoin.icon} 
@@ -407,4 +409,4 @@ export default function NativeNearSend() {
       </Modal>
     </div>
   );
-}
+} 

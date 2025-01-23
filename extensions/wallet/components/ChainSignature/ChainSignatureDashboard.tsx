@@ -1,38 +1,59 @@
-import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab } from "@nextui-org/react";
+import { Card, CardBody, Button, Tooltip, Tabs, Tab } from "@nextui-org/react";
+import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { TokenIcon } from '../../public/icons/TokenIcon';
 import { ActivityIcon } from '../../public/icons/ActivityIcon';
-import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { chains } from '../../data/supportedChain.json';
-import { useChainBalances } from '../../hooks/useChainBalances';
 import Image from 'next/image';
+import { Page } from '../../utils/navigation';
 
-const calculateTotalBalance = (balances) => {
+interface Props {
+  balance: string;
+  walletInfo: {
+    accountId: string;
+    publicKey: string;
+  };
+  transactions: any[];
+  isLoadingTxns: boolean;
+  copied: boolean;
+  handleCopy: (text: string) => void;
+  formatDate: (timestamp: number) => string;
+  getTransactionType: (tx: any) => string;
+  getTransactionAmount: (tx: any) => string;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  };
+  navigateTo: (page: Page | `${Page}?${string}`) => void;
+  evmAddress: string;
+  isDerivingAddress: boolean;
+  derivationError: string;
+  chainBalances: Record<string, string>;
+}
+
+const calculateTotalBalance = (balances: Record<string, string>) => {
   return Object.values(balances)
     .reduce((total, balance) => total + parseFloat(balance), 0)
     .toFixed(4);
 };
 
 export default function ChainSignatureDashboard({ 
+  balance, 
   walletInfo, 
-  transactions, 
+  transactions,
   isLoadingTxns,
   copied,
   handleCopy,
   formatDate,
   getTransactionType,
   getTransactionAmount,
-  router,
+  navigateTo,
   pagination,
   evmAddress,
   isDerivingAddress,
   derivationError,
-}) {
-  const { 
-    balances: chainBalances, 
-    totalBalance,
-    refreshBalances 
-  } = useChainBalances(evmAddress);
-
+  chainBalances
+}: Props) {
   return (
     <>
       {/* Main Balance Card */}
@@ -72,7 +93,7 @@ export default function ChainSignatureDashboard({
                     <div>
                       <div className="font-medium mb-2">Total Balance</div>
                       <div className="text-sm text-gray-600">
-                        {totalBalance} ETH
+                        {calculateTotalBalance(chainBalances)} ETH
                       </div>
                     </div>
 
@@ -81,7 +102,7 @@ export default function ChainSignatureDashboard({
                       {chains.map((chain) => (
                         <Tooltip 
                           key={chain.prefix}
-                          content={`${chain.name}: ${chainBalances[chain.prefix] || '0'} ETH`}
+                          content={chain.name}
                         >
                           <Image
                             src={chain.logo}
@@ -104,7 +125,7 @@ export default function ChainSignatureDashboard({
               <div className="font-mono">{walletInfo?.accountId}</div>
               <Tooltip content={copied ? "Copied!" : "Copy to clipboard"}>
                 <button
-                  onPress={() => handleCopy(walletInfo?.accountId)}
+                  onClick={() => handleCopy(walletInfo?.accountId)}
                   className="text-black opacity-80 hover:opacity-100"
                 >
                   {copied ? (
@@ -125,7 +146,7 @@ export default function ChainSignatureDashboard({
           size="lg"
           color="primary"
           startContent={<ArrowUpIcon className="h-5 w-5" />}
-          onPress={() => router.push('/send?mode=chain')}
+          onPress={() => navigateTo('send?mode=chain')}
           className="h-20"
         >
           <div className="flex flex-col items-start w-full">
@@ -138,7 +159,7 @@ export default function ChainSignatureDashboard({
           size="lg"
           color="secondary"
           startContent={<ArrowDownIcon className="h-5 w-5" />}
-          onPress={() => router.push('/receive')}
+          onPress={() => navigateTo('receive')}
           className="h-20"
           isDisabled
         >

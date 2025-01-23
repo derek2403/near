@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import { 
   Card, 
   CardBody, 
@@ -18,31 +17,64 @@ import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/ou
 import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
+import { chains } from '../../data/supportedChain.json';
 import Image from 'next/image';
+import { navigateTo } from '../../utils/navigation';
 
 const { connect, keyStores } = nearAPI;
 
-export default function NativeNearSend() {
-  const router = useRouter();
+interface Chain {
+  name: string;
+  prefix: string;
+  symbol: string;
+  rpcUrl: string;
+  explorerUrl: string;
+  logo: string;
+}
+
+interface Coin {
+  key: string;
+  label: string;
+  symbol: string;
+  icon: string;
+}
+
+const getTokenDescription = (coin: Coin, chain: Chain) => {
+  // If the token symbol matches the chain's native token symbol, it's native
+  if (coin.symbol === chain.symbol) {
+    return `Native Token on ${chain.name}`;
+  }
+  
+  // Special case for NEAR token
+  if (coin.symbol === 'NEAR') {
+    return `Wrapped NEAR on ${chain.name}`;
+  }
+  
+  // For other tokens
+  return `${coin.label} on ${chain.name}`;
+};
+
+export default function ChainSignatureSend() {
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
   const [selectedCoin, setSelectedCoin] = useState(coins[0]);
+  const [selectedChain, setSelectedChain] = useState(chains[0]);
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [txHash, setTxHash] = useState('');
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleAmountChange = (e) => {
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setAmount(value);
     }
   };
 
-  const onSubmit = async (e) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsError(false);
@@ -50,16 +82,13 @@ export default function NativeNearSend() {
     setIsLoading(true);
     
     try {
-      // Get sender's wallet info from localStorage
-      const publicInfo = localStorage.getItem('publicWalletInfo');
-      const encryptedWallet = localStorage.getItem('encryptedWallet');
-      
-      if (!publicInfo || !encryptedWallet) {
+      // Get wallet info from Chrome storage
+      const result = await chrome.storage.local.get(['walletInfo']);
+      if (!result.walletInfo) {
         throw new Error('Wallet information not found');
       }
 
-      const parsedInfo = JSON.parse(publicInfo);
-      const decryptedWallet = JSON.parse(atob(encryptedWallet));
+      const walletInfo = result.walletInfo;
       
       // Setup connection to NEAR
       const connectionConfig = {
@@ -72,19 +101,19 @@ export default function NativeNearSend() {
       const near = await connect(connectionConfig);
       
       // Create keyPair from private key
-      const keyPair = nearAPI.utils.KeyPair.fromString(decryptedWallet.data.secretKey);
-      await connectionConfig.keyStore.setKey("testnet", parsedInfo.accountId, keyPair);
+      const keyPair = nearAPI.utils.KeyPair.fromString(walletInfo.secretKey);
+      await connectionConfig.keyStore.setKey("testnet", walletInfo.accountId, keyPair);
 
       // Get account object
-      const account = await near.account(parsedInfo.accountId);
+      const account = await near.account(walletInfo.accountId);
 
       // Convert NEAR amount to yoctoNEAR
       const yoctoAmount = nearAPI.utils.format.parseNearAmount(amount);
 
       // Send transaction
       const result = await account.sendMoney(
-        recipientAddress, // receiver account
-        yoctoAmount // amount in yoctoNEAR
+        recipientAddress,
+        yoctoAmount
       );
 
       // Get transaction hash
@@ -96,30 +125,30 @@ export default function NativeNearSend() {
 
     } catch (err) {
       console.error('Transaction error:', err);
-      setErrorMessage(err.message || 'Failed to send transaction');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to send transaction');
       setIsError(true);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getExplorerUrl = (hash) => {
+  const getExplorerUrl = (hash: string) => {
     return `https://testnet.nearblocks.io/txns/${hash}`;
   };
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
-        <div className="w-64 h-64 mb-6">
+      <div className="min-h-[600px] p-6 bg-gray-50 flex flex-col items-center justify-center">
+        <div className="w-48 h-48 mb-6">
           <DotLottieReact
             src="https://lottie.host/de3a77dc-d723-4462-a832-e2928836c922/7LKOuBzujP.lottie"
             autoplay
             loop={false}
           />
         </div>
-        <Card className="max-w-2xl w-full">
-          <CardBody className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-success mb-2">
+        <Card className="w-full">
+          <CardBody className="p-6 text-center">
+            <h2 className="text-xl font-bold text-success mb-2">
               Transaction Successful!
             </h2>
             <p className="text-gray-600 mb-4">
@@ -149,7 +178,6 @@ export default function NativeNearSend() {
               </p>
             </div>
             
-            {/* Action Buttons */}
             <div className="flex flex-col gap-2">
               <Button
                 color="primary"
@@ -167,7 +195,7 @@ export default function NativeNearSend() {
               <Button
                 color="default"
                 variant="light"
-                onPress={() => router.push('/dashboard')}
+                onPress={() => navigateTo('dashboard')}
                 className="w-full"
               >
                 Back to Dashboard
@@ -181,17 +209,17 @@ export default function NativeNearSend() {
 
   if (isError) {
     return (
-      <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
-        <div className="w-64 h-64 mb-6">
+      <div className="min-h-[600px] p-6 bg-gray-50 flex flex-col items-center justify-center">
+        <div className="w-48 h-48 mb-6">
           <DotLottieReact
             src="https://lottie.host/f971bfe3-8fe1-4deb-affa-1c78011f4daa/VNtlmMxARH.lottie"
             autoplay
             loop={false}
           />
         </div>
-        <Card className="max-w-2xl w-full">
-          <CardBody className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-danger mb-2">
+        <Card className="w-full">
+          <CardBody className="p-6 text-center">
+            <h2 className="text-xl font-bold text-danger mb-2">
               Transaction Failed
             </h2>
             <p className="text-gray-600 mb-4">
@@ -213,7 +241,6 @@ export default function NativeNearSend() {
               </div>
             </div>
             
-            {/* Action Buttons */}
             <div className="flex flex-col gap-2">
               <Button
                 color="primary"
@@ -229,7 +256,7 @@ export default function NativeNearSend() {
               <Button
                 color="default"
                 variant="light"
-                onPress={() => router.push('/dashboard')}
+                onPress={() => navigateTo('dashboard')}
                 className="w-full"
               >
                 Back to Dashboard
@@ -242,27 +269,27 @@ export default function NativeNearSend() {
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <Card className="max-w-md mx-auto">
-        <CardBody className="p-8">
+    <div className="min-h-[600px] p-6 bg-gray-50">
+      <Card className="w-full">
+        <CardBody className="p-6">
           {/* Header with Back Button */}
           <div className="flex items-center mb-6">
             <Button
               isIconOnly
               variant="light"
-              onPress={() => router.push('/dashboard')}
+              onPress={() => navigateTo('dashboard')}
               className="mr-4"
             >
               <ArrowLeftIcon className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Send</h1>
+            <h1 className="text-xl font-bold">Send</h1>
           </div>
 
           <form onSubmit={onSubmit} className="space-y-6">
             {/* Amount Input with Coin Selector */}
             <div className="relative">
               <Input
-              isRequired
+                isRequired
                 type="text"
                 size="lg"
                 label="Amount"
@@ -271,21 +298,35 @@ export default function NativeNearSend() {
                 className="text-3xl"
                 endContent={
                   <Button
-                  className="min-w-fit h-full" // Changed to h-full to match input height
-                  onPress={onOpen}
-                  variant="flat"
-                >
+                    className="min-w-fit h-full"
+                    onPress={onOpen}
+                    variant="flat"
+                  >
                     <div className="flex items-center gap-2">
-                      <Image
-                        src={selectedCoin.icon} 
-                        alt={selectedCoin.label} 
-                        width={32}
-                        height={32}
-                        className="rounded-full"
-                      />
+                      <div className="relative">
+                        {/* Main Chain Logo */}
+                        <Image
+                          src={selectedChain.logo} 
+                          alt={selectedChain.name} 
+                          width={40}
+                          height={40}
+                        />
+                        {/* Token Logo - Smaller and overlapping */}
+                        <Image 
+                          src={selectedCoin.icon} 
+                          alt={selectedCoin.label} 
+                          className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
+                          width={24}
+                          height={24}
+                        />
+                      </div>
                       <div>
-                        <p className="font-medium">{selectedCoin.label}</p>
-                        <p className="text-sm text-default-500">{selectedCoin.symbol}</p>
+                        <p className="font-medium text-left">
+                          {selectedChain.name}
+                        </p>
+                        <p className="text-sm text-default-500 text-left">
+                          {selectedCoin.label}
+                        </p>
                       </div>
                     </div>
                   </Button>
@@ -325,79 +366,117 @@ export default function NativeNearSend() {
         </CardBody>
       </Card>
 
-      {/* Coin Selection Modal */}
+      {/* Chain and Token Selection Modal */}
       <Modal
         backdrop="opaque"
         isOpen={isOpen}
         onOpenChange={onOpenChange}
-        scrollBehavior="inside"
+        scrollBehavior="outside"
+        size="2xl"
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">Select Token</ModalHeader>
-              <ModalBody className="py-6">
-                <Autocomplete
-                  defaultItems={coins}
-                  placeholder="Search tokens"
-                  className="mb-6"
-                  onSelectionChange={(key) => {
-                    const selected = coins.find(coin => coin.key === key);
-                    if (selected) {
-                      setSelectedCoin(selected);
-                      onClose();
-                    }
-                  }}
-                >
-                  {(coin) => (
-                    <AutocompleteItem
-                      key={coin.key}
-                      className="p-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Image
-                          src={coin.icon} 
-                          alt={coin.label} 
-                          width={32}
-                          height={32}
-                          className="rounded-full"
-                        />
-                        <div>
-                          <p className="font-medium">{coin.label}</p>
-                          <p className="text-sm text-default-500">{coin.symbol}</p>
+              <ModalHeader className="flex flex-col gap-1">Select Chain & Token</ModalHeader>
+              <ModalBody className="p-0">
+                <div className="flex">
+                  {/* Left side - Chain Selection (Fixed) */}
+                  <div className="w-1/3 p-6 border-r">
+                    <h3 className="text-sm font-medium text-gray-500 mb-4">Select Chain</h3>
+                    <div className="space-y-2">
+                      {chains.map((chain) => (
+                        <div
+                          key={chain.prefix}
+                          className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedChain.prefix === chain.prefix 
+                              ? 'bg-primary-100 border border-primary' 
+                              : 'hover:bg-default-100'
+                          }`}
+                          onClick={() => setSelectedChain(chain)}
+                        >
+                          <Image 
+                            src={chain.logo} 
+                            alt={chain.name} 
+                            width={40}
+                            height={40}
+                          />
+                          <div>
+                            <p className="font-medium">{chain.name}</p>
+                            <p className="text-xs text-default-500">{chain.symbol}</p>
+                          </div>
                         </div>
-                      </div>
-                    </AutocompleteItem>
-                  )}
-                </Autocomplete>
+                      ))}
+                    </div>
+                  </div>
 
-                {/* Popular Tokens Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-gray-500">Popular tokens</h3>
-                  <div className="space-y-2">
-                    {coins.map((coin) => (
-                      <div
-                        key={coin.key}
-                        className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
-                        onClick={() => {
-                          setSelectedCoin(coin);
-                          onClose();
+                  {/* Right side - Token Selection (Scrollable) */}
+                  <div className="w-2/3 max-h-[60vh] overflow-y-auto">
+                    <div className="p-6">
+                      <Autocomplete
+                        defaultItems={coins}
+                        placeholder="Search tokens"
+                        className="mb-6"
+                        onSelectionChange={(key) => {
+                          const selected = coins.find(coin => coin.key === key);
+                          if (selected) {
+                            setSelectedCoin(selected);
+                            onClose();
+                          }
                         }}
                       >
-                        <Image
-                          src={coin.icon} 
-                          alt={coin.label} 
-                          width={32}
-                          height={32}
-                          className="rounded-full"
-                        />
-                        <div className="flex-grow">
-                          <p className="font-medium">{coin.label}</p>
-                          <p className="text-sm text-default-500">{coin.symbol}</p>
+                        {(coin) => (
+                          <AutocompleteItem key={coin.key} className="p-2">
+                            <div className="flex items-center gap-2">
+                              <Image 
+                                src={coin.icon} 
+                                alt={coin.label} 
+                                className="w-8 h-8 rounded-full"
+                                width={32}
+                                height={32}
+                              />
+                              <div>
+                                <p className="font-medium">{coin.label}</p>
+                                <p className="text-sm text-default-500">
+                                  {getTokenDescription(coin, selectedChain)}
+                                </p>
+                              </div>
+                            </div>
+                          </AutocompleteItem>
+                        )}
+                      </Autocomplete>
+
+                      {/* Popular Tokens Section */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-medium text-gray-500">Popular tokens on {selectedChain.name}</h3>
+                        <div className="space-y-2">
+                          {coins.map((coin) => (
+                            <div
+                              key={coin.key}
+                              className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
+                              onClick={() => {
+                                setSelectedCoin(coin);
+                                onClose();
+                              }}
+                            >
+                              <Image 
+                                src={coin.icon} 
+                                alt={coin.label} 
+                                className="w-8 h-8 rounded-full"
+                                width={32}
+                                height={32}
+                              />
+                              <div className="flex-grow">
+                                <p className="font-medium">{coin.label}</p>
+                                <p className="text-sm text-default-500">{coin.symbol}</p>
+                              </div>
+                              <p className="text-sm text-default-500 hidden sm:block">
+                                {getTokenDescription(coin, selectedChain)}
+                              </p>
+                            </div>
+                          ))}
                         </div>
-                        <p className="text-sm text-default-500 hidden sm:block">{coin.description}</p>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
               </ModalBody>
@@ -407,4 +486,4 @@ export default function NativeNearSend() {
       </Modal>
     </div>
   );
-}
+} 

@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
 import { Card, CardBody, Button } from "@nextui-org/react";
 import { EyeIcon, EyeSlashIcon, ArrowLeftIcon, ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import { navigateTo } from '../utils/navigation';
+
+interface WalletInfo {
+  accountId: string;
+  publicKey: string;
+  secretKey: string;
+  seedPhrase?: string;
+  loginMethod?: string;
+}
 
 export default function Settings() {
-  const router = useRouter();
-  const [walletInfo, setWalletInfo] = useState(null);
+  const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [showPrivateInfo, setShowPrivateInfo] = useState({
     seedPhrase: false,
     privateKey: false
   });
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [copiedStates, setCopiedStates] = useState({
     seedPhrase: false,
     privateKey: false,
@@ -19,37 +26,25 @@ export default function Settings() {
   });
 
   useEffect(() => {
-    const publicInfo = localStorage.getItem('publicWalletInfo');
-    const encryptedWallet = localStorage.getItem('encryptedWallet');
-    
-    if (!publicInfo || !encryptedWallet) {
-      router.push('/');
-      return;
-    }
+    const loadWalletInfo = async () => {
+      try {
+        const result = await chrome.storage.local.get(['walletInfo']);
+        if (!result.walletInfo) {
+          navigateTo('home');
+          return;
+        }
 
-    try {
-      const decryptedWallet = decryptWalletData(encryptedWallet);
-      const parsedPublicInfo = JSON.parse(publicInfo);
+        setWalletInfo(result.walletInfo);
+      } catch (err) {
+        setError('Error loading wallet data');
+        console.error('Decryption error:', err);
+      }
+    };
 
-      setWalletInfo({
-        ...parsedPublicInfo,
-        ...decryptedWallet.data
-      });
-    } catch (err) {
-      setError('Error decrypting wallet data');
-      console.error('Decryption error:', err);
-    }
-  }, [router]);
+    loadWalletInfo();
+  }, []);
 
-  const decryptWalletData = (encryptedData) => {
-    try {
-      return JSON.parse(atob(encryptedData));
-    } catch (err) {
-      throw new Error('Failed to decrypt wallet data');
-    }
-  };
-
-  const handleCopy = async (text, field) => {
+  const handleCopy = async (text: string, field: keyof typeof copiedStates) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedStates(prev => ({ ...prev, [field]: true }));
@@ -62,11 +57,12 @@ export default function Settings() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    router.push('/');
+    chrome.storage.local.clear(() => {
+      navigateTo('home');
+    });
   };
 
-  const toggleVisibility = (field) => {
+  const toggleVisibility = (field: keyof typeof showPrivateInfo) => {
     setShowPrivateInfo(prev => ({
       ...prev,
       [field]: !prev[field]
@@ -74,29 +70,31 @@ export default function Settings() {
   };
 
   if (!walletInfo) {
-    return <div className="min-h-screen p-8 bg-gray-50 flex items-center justify-center">
-      <Card>
-        <CardBody>
-          {error || 'Loading...'}
-        </CardBody>
-      </Card>
-    </div>;
+    return (
+      <div className="min-h-[600px] p-6 bg-gray-50 flex items-center justify-center">
+        <Card>
+          <CardBody>
+            {error || 'Loading...'}
+          </CardBody>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <Card className="max-w-2xl mx-auto">
-        <CardBody className="p-8">
+    <div className="min-h-[600px] p-6 bg-gray-50">
+      <Card className="w-full">
+        <CardBody className="p-6">
           <div className="flex items-center mb-6">
             <Button
               isIconOnly
               variant="light"
-              onPress={() => router.push('/dashboard')}
+              onPress={() => navigateTo('dashboard')}
               className="mr-4"
             >
               <ArrowLeftIcon className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Settings</h1>
+            <h1 className="text-xl font-bold">Settings</h1>
           </div>
 
           <div className="space-y-6">
@@ -131,7 +129,7 @@ export default function Settings() {
                         {walletInfo.seedPhrase}
                       </p>
                       <button
-                        onClick={() => handleCopy(walletInfo.seedPhrase, 'seedPhrase')}
+                        onClick={() => handleCopy(walletInfo.seedPhrase || '', 'seedPhrase')}
                         className="ml-2 text-gray-500 hover:text-gray-700"
                       >
                         {copiedStates.seedPhrase ? (
@@ -157,9 +155,9 @@ export default function Settings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Seed Phrase:</label>
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <p className="text-sm text-blue-800">
-                        This account wasn&apos;t created or imported (using Secret Phrase) via Nearer, so no encrypted secret phrase is currently available.
+                        This account wasn't created or imported using a Secret Phrase via Nearer, so no encrypted secret phrase is currently available.
                         <br /><br />
-                        Rest assured, your original secret phrase should still work as a recovery method if you haven&apos;t removed it from your Near account.
+                        Rest assured, your original secret phrase should still work as a recovery method if you haven't removed it from your Near account.
                       </p>
                     </div>
                   </div>
