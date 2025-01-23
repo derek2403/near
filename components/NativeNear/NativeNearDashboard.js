@@ -117,7 +117,7 @@ export default function NativeNearDashboard({
                         <Button
                           size="sm"
                           variant="light"
-                          onPress={() => window.open(`https://explorer.testnet.near.org/transactions/${tx.transaction_hash}`, '_blank')}
+                          onPress={() => window.open(`https://testnet.nearblocks.io/txns/${tx.transaction_hash}`, '_blank')}
                         >
                           View
                         </Button>
