@@ -14,6 +14,34 @@ export default function NativeNearDashboard({
   router,
   pagination
 }) {
+  // Update helper function to check transaction status
+  const getTransactionStatus = (tx) => {
+    if (tx.status === false) {
+      return { status: 'Failed', className: 'text-red-500' };
+    }
+    return { status: '', className: '' };
+  };
+
+  // Add detailed transaction logging
+  const logTransactionDetails = (tx) => {
+    console.group(`Transaction ${tx.transaction_hash}`);
+    console.log('Full Transaction:', tx);
+    console.log('Transaction Type:', getTransactionType(tx, walletInfo.accountId));
+    console.log('Amount:', getTransactionAmount(tx));
+    console.log('Timestamp:', tx.block_timestamp);
+    console.log('Status:', tx.status);
+    if (tx.receipts) {
+      console.log('Receipts:', tx.receipts);
+    }
+    if (tx.actions) {
+      console.log('Actions:', tx.actions);
+    }
+    if (tx.outcomes) {
+      console.log('Outcomes:', tx.outcomes);
+    }
+    console.groupEnd();
+  };
+
   return (
     <>
       {/* Main Balance Card */}
@@ -84,47 +112,58 @@ export default function NativeNearDashboard({
             <div className="space-y-4">
               {/* Transaction list */}
               <div className="space-y-3">
-                {transactions.map((tx) => (
-                  <div
-                    key={tx.transaction_hash}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${
-                        getTransactionType(tx, walletInfo.accountId) === 'Sent' 
-                          ? 'bg-pink-100' 
-                          : 'bg-green-100'
-                      }`}>
-                        {getTransactionType(tx, walletInfo.accountId) === 'Sent' 
-                          ? <ArrowUpIcon className="h-5 w-5 text-pink-500" />
-                          : <ArrowDownIcon className="h-5 w-5 text-green-500" />
-                        }
+                {transactions.map((tx) => {
+                  // Log transaction details
+                  logTransactionDetails(tx);
+                  
+                  const txStatus = getTransactionStatus(tx);
+                  return (
+                    <div
+                      key={tx.transaction_hash}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${
+                          getTransactionType(tx, walletInfo.accountId) === 'Sent' 
+                            ? 'bg-pink-100' 
+                            : 'bg-green-100'
+                        }`}>
+                          {getTransactionType(tx, walletInfo.accountId) === 'Sent' 
+                            ? <ArrowUpIcon className="h-5 w-5 text-pink-500" />
+                            : <ArrowDownIcon className="h-5 w-5 text-green-500" />
+                          }
+                        </div>
+                        <div>
+                          <div className="font-medium flex items-center gap-2">
+                            {getTransactionType(tx, walletInfo.accountId)}
+                            {txStatus.status && (
+                              <span className={`text-sm ${txStatus.className}`}>
+                                ({txStatus.status})
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {formatDate(tx.block_timestamp)}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium">
-                          {getTransactionType(tx, walletInfo.accountId)}
+                      <div className="text-right">
+                        <div className={`font-medium ${txStatus.className}`}>
+                          {getTransactionAmount(tx)} NEAR
                         </div>
                         <div className="text-sm text-gray-500">
-                          {formatDate(tx.block_timestamp)}
+                          <Button
+                            size="sm"
+                            variant="light"
+                            onPress={() => window.open(`https://testnet.nearblocks.io/txns/${tx.transaction_hash}`, '_blank')}
+                          >
+                            View
+                          </Button>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        {getTransactionAmount(tx)} NEAR
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        <Button
-                          size="sm"
-                          variant="light"
-                          onPress={() => window.open(`https://testnet.nearblocks.io/txns/${tx.transaction_hash}`, '_blank')}
-                        >
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Pagination */}
