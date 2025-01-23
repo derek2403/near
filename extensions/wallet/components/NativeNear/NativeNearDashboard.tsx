@@ -34,20 +34,22 @@ export default function NativeNearDashboard({
   navigateTo
 }: Props) {
   return (
-    <>
+    <div className="space-y-6">
       {/* Main Balance Card */}
-      <Card>
+      <Card className="shadow-sm">
         <CardBody className="p-6">
-          <div className="text-black">
-            <div className="text-sm opacity-80 mb-1">Total Balance</div>
-            <div className="text-2xl font-bold mb-4">{balance} NEAR</div>
-            <div className="flex items-center space-x-2">
-              <div className="text-sm opacity-80">Account ID:</div>
-              <div className="font-mono">{walletInfo?.accountId}</div>
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm text-gray-500 mb-1">Total Balance</div>
+              <div className="text-3xl font-bold">{balance} NEAR</div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="text-sm text-gray-500">Account ID:</div>
+              <div className="font-mono text-sm">{walletInfo?.accountId}</div>
               <Tooltip content={copied ? "Copied!" : "Copy to clipboard"}>
                 <button
-                  onClick={() => handleCopy(walletInfo?.accountId)}
-                  className="text-black opacity-80 hover:opacity-100"
+                  onClick={() => handleCopy(walletInfo?.accountId || '')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   {copied ? (
                     <ClipboardDocumentCheckIcon className="h-5 w-5" />
@@ -68,10 +70,10 @@ export default function NativeNearDashboard({
           color="primary"
           startContent={<ArrowUpIcon className="h-5 w-5" />}
           onPress={() => navigateTo('send?mode=native' as const)}
-          className="h-16"
+          className="h-16 shadow-sm"
         >
           <div className="flex flex-col items-start">
-            <span>Send</span>
+            <span className="font-medium">Send</span>
             <span className="text-xs opacity-80">Transfer NEAR</span>
           </div>
         </Button>
@@ -81,69 +83,42 @@ export default function NativeNearDashboard({
           color="secondary"
           startContent={<ArrowDownIcon className="h-5 w-5" />}
           onPress={() => navigateTo('receive')}
-          className="h-16"
+          className="h-16 shadow-sm"
         >
           <div className="flex flex-col items-start">
-            <span>Receive</span>
+            <span className="font-medium">Receive</span>
             <span className="text-xs opacity-80">Get NEAR</span>
           </div>
         </Button>
       </div>
 
       {/* Transactions Card */}
-      <Card>
-        <CardBody>
+      <Card className="shadow-sm">
+        <CardBody className="p-6">
           <h2 className="text-lg font-semibold mb-4">Recent Transactions</h2>
           
           {isLoadingTxns ? (
-            <div className="text-center py-4">Loading transactions...</div>
+            <div className="text-center py-8 text-gray-500">Loading transactions...</div>
           ) : transactions.length === 0 ? (
-            <div className="text-center py-4">No transactions found</div>
+            <div className="text-center py-8 text-gray-500">No transactions yet</div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {transactions.map((tx) => (
-                <Card key={tx.transaction_hash} className="bg-gray-50">
-                  <CardBody className="p-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">
-                          {getTransactionType(tx)}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {formatDate(tx.block_timestamp)}
-                        </p>
-                      </div>
-                      <p className={`font-medium ${
-                        getTransactionAmount(tx).startsWith('+') 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        {getTransactionAmount(tx)} NEAR
-                      </p>
-                    </div>
-                  </CardBody>
-                </Card>
-              ))}
-
-              {/* Pagination */}
-              {pagination.totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-4">
-                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      size="sm"
-                      variant={pagination.currentPage === page ? "solid" : "bordered"}
-                      onPress={() => pagination.onPageChange(page)}
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                <div 
+                  key={tx.transaction_hash}
+                  className="flex justify-between items-center py-3 border-b last:border-0"
+                >
+                  <div>
+                    <div className="font-medium">{getTransactionType(tx)}</div>
+                    <div className="text-sm text-gray-500">{formatDate(tx.block_timestamp)}</div>
+                  </div>
+                  <div className="font-medium">{getTransactionAmount(tx)} NEAR</div>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </CardBody>
       </Card>
-    </>
+    </div>
   );
 } 

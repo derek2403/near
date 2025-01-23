@@ -13,11 +13,19 @@ interface Props {
   isLoadingTxns: boolean;
   copied: boolean;
   handleCopy: (text: string) => void;
+  formatDate: (timestamp: number) => string;
+  getTransactionType: (tx: any) => string;
+  getTransactionAmount: (tx: any) => string;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  };
+  navigateTo: (page: Page | `${Page}?${string}`) => void;
   evmAddress: string;
   isDerivingAddress: boolean;
   derivationError: string;
   chainBalances: Record<string, string>;
-  navigateTo: (page: Page | `${Page}?${string}`) => void;
 }
 
 export default function ChainSignatureDashboard({
@@ -27,11 +35,15 @@ export default function ChainSignatureDashboard({
   isLoadingTxns,
   copied,
   handleCopy,
+  formatDate,
+  getTransactionType,
+  getTransactionAmount,
+  pagination,
+  navigateTo,
   evmAddress,
   isDerivingAddress,
   derivationError,
-  chainBalances,
-  navigateTo
+  chainBalances
 }: Props) {
   return (
     <>
@@ -39,39 +51,34 @@ export default function ChainSignatureDashboard({
       <Card>
         <CardBody className="p-6">
           <div className="text-black">
-            <div className="text-sm opacity-80 mb-1">Chain Signature Wallet</div>
-            
-            {isDerivingAddress ? (
-              <div className="text-center py-4">Deriving EVM address...</div>
-            ) : derivationError ? (
-              <div className="text-red-500">{derivationError}</div>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <div className="font-medium mb-2">Your EVM Address</div>
-                    <div className="text-sm font-mono text-gray-600 flex items-center">
-                      {evmAddress}
-                      <button
-                        onClick={() => handleCopy(evmAddress)}
-                        className="ml-2 text-gray-500 hover:text-gray-700"
-                      >
-                        {copied ? (
-                          <ClipboardDocumentCheckIcon className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <ClipboardIcon className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="text-sm opacity-80 mb-1">Total Balance</div>
+            <div className="text-2xl font-bold mb-4">{balance} NEAR</div>
+            <div className="flex items-center space-x-2">
+              <div className="text-sm opacity-80">EVM Address:</div>
+              <div className="font-mono">{evmAddress || 'Deriving...'}</div>
+              {evmAddress && (
+                <Tooltip content={copied ? "Copied!" : "Copy to clipboard"}>
+                  <button
+                    onClick={() => handleCopy(evmAddress)}
+                    className="text-black opacity-80 hover:opacity-100"
+                  >
+                    {copied ? (
+                      <ClipboardDocumentCheckIcon className="h-5 w-5" />
+                    ) : (
+                      <ClipboardIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </Tooltip>
+              )}
+            </div>
+            {derivationError && (
+              <div className="text-danger text-sm mt-2">{derivationError}</div>
             )}
           </div>
         </CardBody>
       </Card>
 
-      {/* Add action buttons similar to the main app */}
+      {/* Action Buttons */}
       <div className="grid grid-cols-2 gap-4">
         <Button
           size="lg"
@@ -82,7 +89,7 @@ export default function ChainSignatureDashboard({
         >
           <div className="flex flex-col items-start">
             <span>Send</span>
-            <span className="text-xs opacity-80">Transfer via Chain Signature</span>
+            <span className="text-xs opacity-80">Transfer Tokens</span>
           </div>
         </Button>
 
@@ -92,14 +99,26 @@ export default function ChainSignatureDashboard({
           startContent={<ArrowDownIcon className="h-5 w-5" />}
           onPress={() => navigateTo('receive')}
           className="h-16"
-          isDisabled
         >
           <div className="flex flex-col items-start">
             <span>Receive</span>
-            <span className="text-xs opacity-80">Receive via Chain Signature</span>
+            <span className="text-xs opacity-80">Get Tokens</span>
           </div>
         </Button>
       </div>
+
+      {/* Chain Balances */}
+      <Card>
+        <CardBody>
+          <h2 className="text-lg font-semibold mb-4">Chain Balances</h2>
+          {Object.entries(chainBalances).map(([chain, balance]) => (
+            <div key={chain} className="flex justify-between items-center py-2">
+              <span>{chain}</span>
+              <span className="font-medium">{balance}</span>
+            </div>
+          ))}
+        </CardBody>
+      </Card>
 
       {/* Transactions Card with Tabs */}
       <Card>

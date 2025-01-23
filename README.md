@@ -83,8 +83,7 @@ Nearer serves as both a native NEAR wallet and a web extension, similar to MetaM
 - AI integration
 
 ### Phase 2: March/April 2025 
-- Intent-based transactions
-- Chain abstraction
+- Chain signature
 - Enhanced security
   
 ### Phase 3: May/June 2025 (Beta release)

@@ -1,5 +1,7 @@
 import { Card, CardBody, Button, Tooltip, Pagination } from "@nextui-org/react";
-import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, XCircleIcon } from '@heroicons/react/24/outline';
+
+import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, XCircleIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+
 import { useState } from 'react';
 
 export default function NativeNearDashboard({ 
@@ -45,6 +47,13 @@ export default function NativeNearDashboard({
     return Number(amount).toFixed(6);
   };
 
+
+  // Add helper function to get explorer URL
+  const getExplorerUrl = (accountId) => {
+    return `https://testnet.nearblocks.io/address/${accountId}`;
+  };
+
+
   return (
     <>
       {/* Main Balance Card */}
@@ -66,6 +75,14 @@ export default function NativeNearDashboard({
                   ) : (
                     <ClipboardIcon className="h-5 w-5" />
                   )}
+                </button>
+              </Tooltip>
+              <Tooltip content="View on Explorer">
+                <button
+                  onClick={() => window.open(getExplorerUrl(walletInfo?.accountId), '_blank')}
+                  className="text-black opacity-80 hover:opacity-100"
+                >
+                  <ArrowTopRightOnSquareIcon className="h-5 w-5" />
                 </button>
               </Tooltip>
             </div>
