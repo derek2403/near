@@ -1,254 +1,184 @@
 import { useState } from 'react';
 import { parseSeedPhrase } from "near-seed-phrase";
 import * as nearAPI from "near-api-js";
-import { Input, Button, Card, CardBody, Tabs, Tab } from "@nextui-org/react";
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { Card, CardBody, Button, Input, Tabs, Tab } from "@nextui-org/react";
 import { navigateTo } from '../utils/navigation';
+import { LockIcon } from '../public/icons/LockIcon';
+import CreatePassword from '../components/CreatePassword';
 
-const { connect, keyStores, KeyPair } = nearAPI;
-
-interface WalletInfo {
-  accountId: string;
-  publicKey: string;
-  secretKey: string;
-  seedPhrase?: string;
-}
+const { connect, keyStores } = nearAPI;
 
 export default function Login() {
-  const [loginMethod, setLoginMethod] = useState('seedPhrase');
   const [seedPhrase, setSeedPhrase] = useState('');
   const [privateKey, setPrivateKey] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [showSeedPhrase, setShowSeedPhrase] = useState(false);
-  const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'seedPhrase' | 'privateKey'>('seedPhrase');
+  const [walletToEncrypt, setWalletToEncrypt] = useState<any>(null);
 
-  const handleLogin = async () => {
-    setLoading(true);
-    setError(null);
+  const handleLogin = async (password: string) => {
+    setError('');
+    setIsLoading(true);
 
     try {
-      let keyPair: nearAPI.KeyPair;
-      let publicKey: string;
-      let walletInfo: WalletInfo;
+      if (!walletToEncrypt) {
+        throw new Error('No wallet information to encrypt');
+      }
+
+      // Store wallet info in Chrome storage
+      await chrome.storage.local.set({
+        walletInfo: {
+          ...walletToEncrypt,
+          loginMethod
+        }
+      });
+
+      navigateTo('dashboard');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to login');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const validateAndProceed = async () => {
+    setError('');
+    setIsLoading(true);
+
+    try {
+      let accountId, keyPair;
 
       if (loginMethod === 'seedPhrase') {
         if (!seedPhrase.trim()) {
           throw new Error('Please enter your seed phrase');
         }
-        
-        const parsedKey = parseSeedPhrase(seedPhrase);
-        keyPair = KeyPair.fromString(parsedKey.secretKey);
-        publicKey = keyPair.getPublicKey().toString();
 
-        // Initialize NEAR connection
+        const { secretKey, publicKey } = parseSeedPhrase(seedPhrase);
+        keyPair = nearAPI.utils.KeyPair.fromString(secretKey);
+
+        // Setup connection to NEAR
         const connectionConfig = {
           networkId: "testnet",
           keyStore: new keyStores.InMemoryKeyStore(),
           nodeUrl: "https://rpc.testnet.near.org",
-          walletUrl: "https://testnet.mynearwallet.com/",
-          helperUrl: "https://helper.testnet.near.org",
-          explorerUrl: "https://testnet.nearblocks.io"
         };
 
+        // Connect to NEAR
         const near = await connect(connectionConfig);
-        const keyStore = new keyStores.InMemoryKeyStore();
+        
+        // Get account ID from public key
+        const pubKey = keyPair.getPublicKey();
+        accountId = Buffer.from(pubKey.data).toString('hex');
 
-        // Get all accounts for this public key using NEAR RPC
-        const response = await fetch('https://rpc.testnet.near.org', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 'dontcare',
-            method: 'query',
-            params: {
-              request_type: 'view_access_key_list',
-              finality: 'final',
-              account_id: 'extensions.testnet'
-            }
-          })
-        });
-
-        const data = await response.json();
-        if (data.error) {
-          throw new Error('No accounts found for this seed phrase');
-        }
-
-        walletInfo = {
-          accountId: 'extensions.testnet',
+        setWalletToEncrypt({
+          accountId,
           publicKey: publicKey,
-          secretKey: parsedKey.secretKey,
-          seedPhrase: seedPhrase
-        };
+          secretKey: secretKey,
+          seedPhrase
+        });
 
       } else {
         if (!privateKey.trim()) {
           throw new Error('Please enter your private key');
         }
 
-        try {
-          keyPair = KeyPair.fromString(privateKey);
-          publicKey = keyPair.getPublicKey().toString();
+        keyPair = nearAPI.utils.KeyPair.fromString(privateKey);
+        const pubKey = keyPair.getPublicKey();
+        accountId = Buffer.from(pubKey.data).toString('hex');
 
-          // Initialize NEAR connection
-          const connectionConfig = {
-            networkId: "testnet",
-            keyStore: new keyStores.InMemoryKeyStore(),
-            nodeUrl: "https://rpc.testnet.near.org",
-            walletUrl: "https://testnet.mynearwallet.com/",
-            helperUrl: "https://helper.testnet.near.org",
-            explorerUrl: "https://testnet.nearblocks.io"
-          };
-
-          const near = await connect(connectionConfig);
-          const keyStore = new keyStores.InMemoryKeyStore();
-
-          // Get all accounts for this public key using NEAR RPC
-          const response = await fetch('https://rpc.testnet.near.org', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              id: 'dontcare',
-              method: 'query',
-              params: {
-                request_type: 'view_access_key_list',
-                finality: 'final',
-                account_id: 'extensions.testnet'
-              }
-            })
-          });
-
-          const data = await response.json();
-          if (data.error) {
-            throw new Error('No accounts found for this private key');
-          }
-
-          walletInfo = {
-            accountId: 'extensions.testnet',
-            publicKey: publicKey,
-            secretKey: privateKey
-          };
-        } catch (err) {
-          throw new Error('No accounts found for this private key');
-        }
+        setWalletToEncrypt({
+          accountId,
+          publicKey: pubKey.toString(),
+          secretKey: privateKey
+        });
       }
 
-      // Store wallet info and navigate to dashboard
-      chrome.storage.local.set({ 
-        walletInfo,
-        currentPage: 'dashboard'
-      });
-
+      setShowPasswordModal(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred');
-      console.error('Login error:', err);
+      console.error('Validation error:', err);
+      setError(err instanceof Error ? err.message : 'Invalid credentials');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleBack = () => {
-    navigateTo('home');
-  };
-
   return (
-    <div className="min-h-[600px] p-4 bg-gray-50">
-      <Button
-        onPress={handleBack}
-        variant="light"
-        className="mb-4"
-        size="sm"
-      >
-        ← Back
-      </Button>
-      <Card className="max-w-md mx-auto">
+    <div className="min-h-[600px] p-6 bg-gray-50">
+      <Card className="w-full">
         <CardBody className="p-6">
-          <h1 className="text-xl font-bold mb-4">Login to NEAR Wallet</h1>
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold mb-2">Welcome Back!</h1>
+            <p className="text-gray-600">Login to your NEAR wallet</p>
+          </div>
+
+          <Tabs 
+            aria-label="Login options" 
+            selectedKey={loginMethod}
+            onSelectionChange={(key) => setLoginMethod(key as 'seedPhrase' | 'privateKey')}
+            className="mb-6"
+          >
+            <Tab key="seedPhrase" title="Seed Phrase">
+              <div className="py-4">
+                <Input
+                  label="Enter your seed phrase"
+                  placeholder="Enter your 12-word seed phrase"
+                  value={seedPhrase}
+                  onChange={(e) => setSeedPhrase(e.target.value)}
+                  type="text"
+                  variant="bordered"
+                  className="mb-4"
+                />
+              </div>
+            </Tab>
+            <Tab key="privateKey" title="Private Key">
+              <div className="py-4">
+                <Input
+                  label="Enter your private key"
+                  placeholder="Enter your private key"
+                  value={privateKey}
+                  onChange={(e) => setPrivateKey(e.target.value)}
+                  type="text"
+                  variant="bordered"
+                  className="mb-4"
+                />
+              </div>
+            </Tab>
+          </Tabs>
 
           {error && (
-            <Card className="bg-danger-50 border-none mb-4">
-              <CardBody className="text-danger py-2 text-sm">
-                {error}
-              </CardBody>
-            </Card>
+            <div className="mb-4 p-3 bg-danger-50 text-danger rounded-lg text-sm">
+              {error}
+            </div>
           )}
 
           <div className="space-y-4">
-            <Tabs
-              selectedKey={loginMethod}
-              onSelectionChange={key => setLoginMethod(key as string)}
-              variant="bordered"
-              fullWidth
-            >
-              <Tab key="seedPhrase" title="Seed Phrase">
-                <div className="pt-4">
-                  <Input
-                    label="Enter your seed phrase"
-                    value={seedPhrase}
-                    onChange={(e) => setSeedPhrase(e.target.value)}
-                    variant="bordered"
-                    type={showSeedPhrase ? "text" : "password"}
-                    endContent={
-                      <button
-                        type="button"
-                        onClick={() => setShowSeedPhrase(!showSeedPhrase)}
-                        className="focus:outline-none"
-                      >
-                        {showSeedPhrase ? (
-                          <EyeSlashIcon className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <EyeIcon className="h-4 w-4 text-gray-500" />
-                        )}
-                      </button>
-                    }
-                  />
-                </div>
-              </Tab>
-              <Tab key="privateKey" title="Private Key">
-                <div className="pt-4">
-                  <Input
-                    type={showPrivateKey ? "text" : "password"}
-                    label="Enter your private key"
-                    value={privateKey}
-                    onChange={(e) => setPrivateKey(e.target.value)}
-                    variant="bordered"
-                    endContent={
-                      <button
-                        type="button"
-                        onClick={() => setShowPrivateKey(!showPrivateKey)}
-                        className="focus:outline-none"
-                      >
-                        {showPrivateKey ? (
-                          <EyeSlashIcon className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <EyeIcon className="h-4 w-4 text-gray-500" />
-                        )}
-                      </button>
-                    }
-                  />
-                </div>
-              </Tab>
-            </Tabs>
-
             <Button
-              onPress={handleLogin}
-              isDisabled={loading}
               color="primary"
               className="w-full"
-              size="lg"
-              isLoading={loading}
+              onPress={validateAndProceed}
+              isLoading={isLoading}
             >
-              {loading ? 'Logging in...' : 'Login'}
+              Continue
+            </Button>
+            <Button
+              variant="light"
+              className="w-full"
+              onPress={() => navigateTo('home')}
+            >
+              Back
             </Button>
           </div>
         </CardBody>
       </Card>
+
+      <CreatePassword
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSubmit={handleLogin}
+        error={error}
+      />
     </div>
   );
 } 
