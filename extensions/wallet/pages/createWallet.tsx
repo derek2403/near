@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as nearAPI from "near-api-js";
 import { generateSeedPhrase } from "near-seed-phrase";
 import { EyeIcon, EyeSlashIcon, ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
 import { Input, Button, Card, CardBody, Spinner } from "@nextui-org/react";
 import { navigateTo } from '../utils/navigation';
+import CreatePassword from '../components/CreatePassword';
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
@@ -22,6 +23,8 @@ export default function CreateWallet() {
     publicKey: false,
     accountId: false
   });
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [walletToEncrypt, setWalletToEncrypt] = useState<any>(null);
 
   const checkAccountAvailability = async () => {
     try {
@@ -127,6 +130,84 @@ export default function CreateWallet() {
     navigateTo('home');
   };
 
+  const validateAccountId = (id: string) => {
+    if (id.length < 2) return 'Account ID must be at least 2 characters';
+    if (id.length > 64) return 'Account ID must be less than 64 characters';
+    if (!/^[a-z\d]+[-_]*[a-z\d]+$/.test(id)) {
+      return 'Account ID can only contain lowercase letters, digits, - and _';
+    }
+    return '';
+  };
+
+  const handleCreateWallet = async (password: string) => {
+    setError('');
+    setLoading(true);
+
+    try {
+      if (!walletToEncrypt) {
+        throw new Error('No wallet information to encrypt');
+      }
+
+      // Store wallet info in Chrome storage
+      await chrome.storage.local.set({
+        walletInfo: {
+          ...walletToEncrypt,
+          loginMethod: 'create'
+        }
+      });
+
+      navigateTo('dashboard');
+    } catch (err) {
+      console.error('Wallet creation error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create wallet');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validateAndProceed = async () => {
+    const validationError = validateAccountId(accountId);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+
+    try {
+      // Generate new keypair and seed phrase
+      const { seedPhrase, secretKey, publicKey } = generateSeedPhrase();
+      
+      // Setup connection to NEAR
+      const connectionConfig = {
+        networkId: "testnet",
+        keyStore: new keyStores.InMemoryKeyStore(),
+        nodeUrl: "https://rpc.testnet.near.org",
+      };
+
+      // Connect to NEAR
+      const near = await connect(connectionConfig);
+      
+      // Create KeyPair and add it to KeyStore
+      const keyPair = nearAPI.utils.KeyPair.fromString(secretKey);
+      await connectionConfig.keyStore.setKey("testnet", accountId, keyPair);
+
+      setWalletToEncrypt({
+        accountId,
+        publicKey,
+        secretKey,
+        seedPhrase
+      });
+
+      setShowPasswordModal(true);
+    } catch (err) {
+      console.error('Validation error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create wallet');
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-[600px] p-4 bg-gray-50">
       <Button
@@ -185,14 +266,14 @@ export default function CreateWallet() {
               )}
 
               <Button
-                onPress={generateWallet}
+                onPress={validateAndProceed}
                 isDisabled={loading || !isAvailable || !accountId}
                 color="primary"
                 className="w-full"
                 size="lg"
                 isLoading={loading}
               >
-                Create Wallet
+                Continue
               </Button>
             </div>
           )}
@@ -332,6 +413,13 @@ export default function CreateWallet() {
           )}
         </CardBody>
       </Card>
+
+      <CreatePassword
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSubmit={handleCreateWallet}
+        error={error || undefined}
+      />
     </div>
   );
 } 
