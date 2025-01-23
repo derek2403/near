@@ -3,6 +3,7 @@ import { TokenIcon } from '../../public/icons/TokenIcon';
 import { ActivityIcon } from '../../public/icons/ActivityIcon';
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { chains } from '../../data/supportedChain.json';
+import { useChainBalances } from '../../hooks/useChainBalances';
 import Image from 'next/image';
 
 const calculateTotalBalance = (balances) => {
@@ -12,7 +13,6 @@ const calculateTotalBalance = (balances) => {
 };
 
 export default function ChainSignatureDashboard({ 
-  balance, 
   walletInfo, 
   transactions, 
   isLoadingTxns,
@@ -26,8 +26,13 @@ export default function ChainSignatureDashboard({
   evmAddress,
   isDerivingAddress,
   derivationError,
-  chainBalances
 }) {
+  const { 
+    balances: chainBalances, 
+    totalBalance,
+    refreshBalances 
+  } = useChainBalances(evmAddress);
+
   return (
     <>
       {/* Main Balance Card */}
@@ -67,7 +72,7 @@ export default function ChainSignatureDashboard({
                     <div>
                       <div className="font-medium mb-2">Total Balance</div>
                       <div className="text-sm text-gray-600">
-                        {calculateTotalBalance(chainBalances)} ETH
+                        {totalBalance} ETH
                       </div>
                     </div>
 
@@ -76,7 +81,7 @@ export default function ChainSignatureDashboard({
                       {chains.map((chain) => (
                         <Tooltip 
                           key={chain.prefix}
-                          content={chain.name}
+                          content={`${chain.name}: ${chainBalances[chain.prefix] || '0'} ETH`}
                         >
                           <Image
                             src={chain.logo}

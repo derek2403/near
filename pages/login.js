@@ -41,6 +41,15 @@ export default function Login() {
     }
   };
 
+  const validateSeedPhrase = (phrase) => {
+    const words = phrase.trim().split(/\s+/);
+    return words.length === 12;
+  };
+
+  const validatePrivateKey = (key) => {
+    return /^ed25519:[A-Za-z0-9]{88}$/.test(key);
+  };
+
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
@@ -55,30 +64,25 @@ export default function Login() {
         if (!seedPhrase.trim()) {
           throw new Error('Please enter your seed phrase');
         }
+
+        // Validate seed phrase length
+        if (!validateSeedPhrase(seedPhrase)) {
+          throw new Error('Invalid seed phrase. Must be 12 words');
+        }
         
         // Parse seed phrase and get key pair
-        console.log('Processing seed phrase...');
         const parsedKey = parseSeedPhrase(seedPhrase);
         keyPair = KeyPair.fromString(parsedKey.secretKey);
         publicKey = parsedKey.publicKey;
         
-        // Log derived keys for verification
-        console.log('=== Seed Phrase Derived Keys ===');
-        console.log('Original Seed Phrase:', seedPhrase);
-        console.log('Derived Public Key:', publicKey);
-        console.log('Derived Private Key:', parsedKey.secretKey);
-        console.log('===============================');
-        
         // Continue with account lookup...
         const accounts = await lookupAccountsByPublicKey(publicKey);
-        console.log('Accounts found for seed phrase:', accounts);
         
         if (accounts.length === 0) {
-          finalAccountId = seedPhrase.split(' ')[0] + '.testnet';
-          console.log('No accounts found, using fallback account ID:', finalAccountId);
-        } else {
-          finalAccountId = accounts.find(acc => acc.includes('.')) || accounts[0];
+          throw new Error('No accounts found. Please check your seed phrase and try again.');
         }
+        
+        finalAccountId = accounts.find(acc => acc.includes('.')) || accounts[0];
         
         walletInfo = {
           accountId: finalAccountId,
@@ -93,24 +97,20 @@ export default function Login() {
           throw new Error('Please enter your private key');
         }
 
+        // Validate private key format
+        if (!validatePrivateKey(privateKey)) {
+          throw new Error('Invalid private key format. Must be in format: ed25519:XXXXXXX');
+        }
+
         // Create key pair from private key
-        console.log('Processing private key...');
         keyPair = KeyPair.fromString(privateKey);
         publicKey = keyPair.getPublicKey().toString();
         
-        // Log keys for verification
-        console.log('=== Private Key Information ===');
-        console.log('Original Private Key:', privateKey);
-        console.log('Derived Public Key:', publicKey);
-        console.log('Note: Seed phrase cannot be derived from private key');
-        console.log('============================');
-        
         // Continue with account lookup...
         const accounts = await lookupAccountsByPublicKey(publicKey);
-        console.log('Accounts found for private key:', accounts);
 
         if (accounts.length === 0) {
-          throw new Error('No accounts found for this private key');
+          throw new Error('No accounts found. Please check your private key and try again.');
         }
         
         finalAccountId = accounts.find(acc => acc.includes('.')) || accounts[0];
@@ -124,15 +124,6 @@ export default function Login() {
         };
       }
 
-      // Log final wallet info for verification
-      console.log('=== Final Wallet Info ===');
-      console.log('Account ID:', walletInfo.accountId);
-      console.log('Public Key:', walletInfo.publicKey);
-      console.log('Login Method:', walletInfo.loginMethod);
-      console.log('Has Seed Phrase:', !!walletInfo.seedPhrase);
-      console.log('Has Private Key:', !!walletInfo.secretKey);
-      console.log('=======================');
-
       // Store temporarily and open password modal
       setTempWalletInfo(walletInfo);
       setLoggedInAccount(finalAccountId);
@@ -141,7 +132,6 @@ export default function Login() {
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Failed to login. Please check your credentials and try again.');
-    } finally {
       setLoading(false);
     }
   };
