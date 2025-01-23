@@ -43,11 +43,11 @@
       "description": "Arbitrum Token on NEAR" 
     },
     { 
-      "label": "Polygon", 
-      "key": "matic", 
-      "icon": "https://cryptologos.cc/logos/polygon-matic-logo.png",
-      "symbol": "MATIC",
-      "description": "Polygon Token on NEAR" 
+      "label": "Base", 
+      "key": "base", 
+      "icon": "https://altcoinsbox.com/wp-content/uploads/2023/02/base-logo-in-blue.png",
+      "symbol": "ETH",
+      "description": "Base Token on NEAR" 
     }
   ]
 } 
