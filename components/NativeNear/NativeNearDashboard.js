@@ -1,5 +1,5 @@
 import { Card, CardBody, Button, Tooltip, Pagination } from "@nextui-org/react";
-import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
+import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 export default function NativeNearDashboard({ 
   balance, 
@@ -113,10 +113,10 @@ export default function NativeNearDashboard({
               {/* Transaction list */}
               <div className="space-y-3">
                 {transactions.map((tx) => {
-                  // Log transaction details
                   logTransactionDetails(tx);
-                  
                   const txStatus = getTransactionStatus(tx);
+                  const isFailed = txStatus.status === 'Failed';
+                  
                   return (
                     <div
                       key={tx.transaction_hash}
@@ -124,14 +124,19 @@ export default function NativeNearDashboard({
                     >
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${
-                          getTransactionType(tx, walletInfo.accountId) === 'Sent' 
-                            ? 'bg-pink-100' 
-                            : 'bg-green-100'
+                          isFailed 
+                            ? 'bg-red-100' 
+                            : getTransactionType(tx, walletInfo.accountId) === 'Sent'
+                              ? 'bg-pink-100' 
+                              : 'bg-green-100'
                         }`}>
-                          {getTransactionType(tx, walletInfo.accountId) === 'Sent' 
-                            ? <ArrowUpIcon className="h-5 w-5 text-pink-500" />
-                            : <ArrowDownIcon className="h-5 w-5 text-green-500" />
-                          }
+                          {isFailed ? (
+                            <XCircleIcon className="h-5 w-5 text-red-500" />
+                          ) : getTransactionType(tx, walletInfo.accountId) === 'Sent' ? (
+                            <ArrowUpIcon className="h-5 w-5 text-pink-500" />
+                          ) : (
+                            <ArrowDownIcon className="h-5 w-5 text-green-500" />
+                          )}
                         </div>
                         <div>
                           <div className="font-medium flex items-center gap-2">
@@ -148,9 +153,11 @@ export default function NativeNearDashboard({
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`font-medium ${txStatus.className}`}>
-                          {getTransactionAmount(tx)} NEAR
-                        </div>
+                        {!isFailed && (
+                          <div className={`font-medium ${txStatus.className}`}>
+                            {getTransactionAmount(tx)} NEAR
+                          </div>
+                        )}
                         <div className="text-sm text-gray-500">
                           <Button
                             size="sm"
