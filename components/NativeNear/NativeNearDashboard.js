@@ -1,5 +1,6 @@
 import { Card, CardBody, Button, Tooltip, Pagination } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 
 export default function NativeNearDashboard({ 
   balance, 
@@ -14,12 +15,34 @@ export default function NativeNearDashboard({
   router,
   pagination
 }) {
+  // Add state for copy icon
+  const [showCopyTick, setShowCopyTick] = useState(false);
+
+  // Modified copy handler
+  const handleCopyClick = async () => {
+    try {
+      await navigator.clipboard.writeText(walletInfo?.accountId);
+      setShowCopyTick(true);
+      setTimeout(() => {
+        setShowCopyTick(false);
+      }, 1000); // Change back after 1 second
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
   // Update helper function to check transaction status
   const getTransactionStatus = (tx) => {
     if (tx.status === false) {
       return { status: 'Failed', className: 'text-red-500' };
     }
     return { status: '', className: '' };
+  };
+
+  // Add helper function to format NEAR amount
+  const formatNearAmount = (amount) => {
+    // Convert to number and fix to 6 decimal places
+    return Number(amount).toFixed(6);
   };
 
   return (
@@ -29,16 +52,16 @@ export default function NativeNearDashboard({
         <CardBody className="p-8">
           <div className="text-black">
             <div className="text-sm opacity-80 mb-1">Total Balance</div>
-            <div className="text-4xl font-bold mb-4">{balance} NEAR</div>
+            <div className="text-4xl font-bold mb-4">{formatNearAmount(balance)} NEAR</div>
             <div className="flex items-center space-x-2">
               <div className="text-sm opacity-80">Account ID:</div>
               <div className="font-mono">{walletInfo?.accountId}</div>
-              <Tooltip content={copied ? "Copied!" : "Copy to clipboard"}>
+              <Tooltip content={showCopyTick ? "Copied!" : "Copy to clipboard"}>
                 <button
-                  onPress={() => handleCopy(walletInfo?.accountId)}
+                  onClick={handleCopyClick}
                   className="text-black opacity-80 hover:opacity-100"
                 >
-                  {copied ? (
+                  {showCopyTick ? (
                     <ClipboardDocumentCheckIcon className="h-5 w-5" />
                   ) : (
                     <ClipboardIcon className="h-5 w-5" />
@@ -134,7 +157,7 @@ export default function NativeNearDashboard({
                       <div className="text-right">
                         {!isFailed && (
                           <div className={`font-medium ${txStatus.className}`}>
-                            {getTransactionAmount(tx)} NEAR
+                            {formatNearAmount(getTransactionAmount(tx))} NEAR
                           </div>
                         )}
                         <div className="text-sm text-gray-500">
