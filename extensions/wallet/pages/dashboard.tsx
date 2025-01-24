@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button, Card, CardBody, Tabs, Tab } from "@nextui-org/react";
-import { ClipboardIcon, ClipboardDocumentCheckIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
+import { Cog8ToothIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
 import { navigateTo } from '../utils/navigation';
 import NativeNearDashboard from '../components/NativeNear/NativeNearDashboard';
@@ -231,7 +231,7 @@ export default function Dashboard() {
   const baseProps = {
     balance,
     walletInfo,
-    transactions: transactions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE),
+    transactions,
     isLoadingTxns,
     copied,
     handleCopy,
@@ -239,17 +239,17 @@ export default function Dashboard() {
     getTransactionType,
     getTransactionAmount,
     pagination: {
-      currentPage,
-      totalPages,
-      onPageChange: setCurrentPage
+      currentPage: 1,
+      totalPages: 1,
+      onPageChange: () => {} // No-op since pagination isn't implemented yet
     },
     navigateTo
   };
 
   return (
-    <div className="min-h-[600px] p-6 bg-gray-50 space-y-6">
+    <div className="min-h-[600px] bg-gray-50">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between p-6 border-b bg-white">
         <div className="flex items-center gap-6">
           <h1 className="text-xl font-bold">Wallet</h1>
           <Tabs 
