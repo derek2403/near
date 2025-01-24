@@ -44,5 +44,4 @@ export type WalletEvent =
   | { type: 'CONNECT_WALLET' }
   | { type: 'DISCONNECT_WALLET' }
   | { type: 'SEND_TRANSACTION'; params: TransactionParams }
-  | { type: 'SIGN_MESSAGE'; message: string }
-  | { type: 'GET_ACCOUNT_STATE' }; 
+  | { type: 'CHECK_CONNECTION' }; 

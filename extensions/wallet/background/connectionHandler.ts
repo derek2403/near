@@ -1,34 +1,15 @@
 import { ConnectionManager } from '../../sdk/src/connectionManager';
 
-interface ConnectionRequest {
-  origin: string;
-  title: string;
-  icon: string;
-}
-
 export class ConnectionHandler {
-  private static pendingRequests: Map<string, ConnectionRequest> = new Map();
-
-  static async handleConnectionRequest(origin: string, sender: chrome.runtime.MessageSender): Promise<boolean> {
+  static async handleConnectionRequest(): Promise<boolean> {
     // Check if already connected
-    if (await ConnectionManager.isConnected(origin)) {
+    if (await ConnectionManager.isConnected()) {
       return true;
     }
 
-    // Create connection request
-    const request: ConnectionRequest = {
-      origin,
-      title: sender.tab?.title || origin,
-      icon: sender.tab?.favIconUrl || ''
-    };
-
-    // Store pending request
-    const requestId = Math.random().toString(36).substring(7);
-    this.pendingRequests.set(requestId, request);
-
     // Open connection approval popup
-    await chrome.windows.create({
-      url: `popup.html#/approve-connection/${requestId}`,
+    const popup = await chrome.windows.create({
+      url: 'index.html#/approve-connection',
       type: 'popup',
       width: 360,
       height: 600
@@ -37,31 +18,26 @@ export class ConnectionHandler {
     // Wait for user approval
     return new Promise((resolve) => {
       const checkApproval = setInterval(async () => {
-        if (!this.pendingRequests.has(requestId)) {
+        const isConnected = await ConnectionManager.isConnected();
+        if (isConnected) {
           clearInterval(checkApproval);
-          const isConnected = await ConnectionManager.isConnected(origin);
-          resolve(isConnected);
+          if (popup.id) {
+            await chrome.windows.remove(popup.id);
+          }
+          resolve(true);
         }
       }, 500);
     });
   }
 
-  static async approveConnection(requestId: string): Promise<void> {
-    const request = this.pendingRequests.get(requestId);
-    if (!request) return;
-
+  static async approveConnection(): Promise<void> {
     const { walletInfo } = await chrome.storage.local.get(['walletInfo']);
     if (!walletInfo) throw new Error('No wallet found');
 
-    await ConnectionManager.saveConnection(request.origin, walletInfo.accountId);
-    this.pendingRequests.delete(requestId);
+    await ConnectionManager.saveConnection(walletInfo.accountId);
   }
 
-  static async rejectConnection(requestId: string): Promise<void> {
-    this.pendingRequests.delete(requestId);
-  }
-
-  static async getConnectionRequest(requestId: string): Promise<ConnectionRequest | null> {
-    return this.pendingRequests.get(requestId) || null;
+  static async rejectConnection(): Promise<void> {
+    await ConnectionManager.removeConnection();
   }
 } 

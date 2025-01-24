@@ -58,12 +58,10 @@ async function handleTransaction(params: TransactionParams) {
 chrome.runtime.onMessageExternal.addListener(
   async (message: WalletEvent, sender, sendResponse) => {
     try {
-      const origin = sender.origin || '';
-
       switch (message.type) {
         case 'CONNECT_WALLET': {
           // Handle connection request
-          const isApproved = await ConnectionHandler.handleConnectionRequest(origin, sender);
+          const isApproved = await ConnectionHandler.handleConnectionRequest();
           if (!isApproved) {
             sendResponse({ error: 'Connection rejected' });
             return;
@@ -84,7 +82,7 @@ chrome.runtime.onMessageExternal.addListener(
 
         case 'SEND_TRANSACTION': {
           // Check if connected
-          if (!await ConnectionManager.isConnected(origin)) {
+          if (!await ConnectionManager.isConnected()) {
             sendResponse({ error: 'Not connected' });
             return;
           }
@@ -95,9 +93,16 @@ chrome.runtime.onMessageExternal.addListener(
         }
 
         case 'DISCONNECT_WALLET':
-          await ConnectionManager.removeConnection(origin);
+          await ConnectionManager.removeConnection();
           sendResponse({ success: true });
           break;
+
+        case 'CHECK_CONNECTION': {
+          const isConnected = await ConnectionManager.isConnected();
+          const accountId = await ConnectionManager.getConnectedAccount();
+          sendResponse({ connected: isConnected, accountId });
+          break;
+        }
 
         default:
           sendResponse({ error: 'Unknown message type' });
