@@ -10,28 +10,50 @@ export function useEvmDerivation(walletInfo) {
   const [chainBalances, setChainBalances] = useState({});
 
   useEffect(() => {
-    const deriveEvmAddress = async () => {
+    const deriveEvmAddresses = async () => {
       if (!walletInfo?.accountId || evmAddress) return;
 
       try {
         setIsDerivingAddress(true);
         setDerivationError('');
 
-        const derivationPath = `ethereum,1`;
-        const adapter = await setupAdapter({
+        // Define chain derivation paths
+        const chainPaths = [
+          { chain: 'ethereum', path: 'ethereum,1' },
+          { chain: 'base', path: 'base,1' },
+          { chain: 'optimism', path: 'optimism,1' },
+          { chain: 'arbitrum', path: 'arbitrum,1' }
+        ];
+
+        // Derive the first address (ethereum) as the main EVM address
+        const mainAdapter = await setupAdapter({
           accountId: walletInfo.accountId,
           mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
-          derivationPath: derivationPath,
+          derivationPath: chainPaths[0].path,
         });
 
-        setEvmAddress(adapter.address);
+        setEvmAddress(mainAdapter.address);
 
         // Fetch balances from all supported chains
         const balances = {};
         for (const chain of chains) {
           try {
+            // Get the appropriate derivation path for this chain
+            const chainConfig = chainPaths.find(cp => cp.chain === chain.prefix);
+            
+            // If this chain has a specific derivation path, use it
+            let address = mainAdapter.address; // Default to main address
+            if (chainConfig) {
+              const chainAdapter = await setupAdapter({
+                accountId: walletInfo.accountId,
+                mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",
+                derivationPath: chainConfig.path,
+              });
+              address = chainAdapter.address;
+            }
+
             const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
-            const balance = await provider.getBalance(adapter.address);
+            const balance = await provider.getBalance(address);
             balances[chain.prefix] = ethers.formatEther(balance);
           } catch (err) {
             console.error(`Error fetching balance for ${chain.name}:`, err);
@@ -49,7 +71,7 @@ export function useEvmDerivation(walletInfo) {
       }
     };
 
-    deriveEvmAddress();
+    deriveEvmAddresses();
   }, [walletInfo, evmAddress]);
 
   return {
