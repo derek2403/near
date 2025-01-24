@@ -1,0 +1,21 @@
+{
+  "name": "near-wallet-connector",
+  "version": "0.1.0",
+  "description": "SDK for connecting to custom NEAR wallet extension",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "near-api-js": "^2.1.4"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.260",
+    "@types/node": "^20.11.16",
+    "typescript": "^5.3.3"
+  }
+} 

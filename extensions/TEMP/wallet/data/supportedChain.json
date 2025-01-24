@@ -1,0 +1,37 @@
+{
+    "chains": [
+      {
+        "name": "Ethereum",
+        "prefix": "eth",
+        "symbol": "ETH",
+        "rpcUrl": "https://eth-mainnet.g.alchemy.com/v2/your-api-key",
+        "explorerUrl": "https://etherscan.io/address/",
+        "logo": "/icons/ethereum.svg"
+      },
+      {
+        "name": "Polygon",
+        "prefix": "matic",
+        "symbol": "MATIC",
+        "rpcUrl": "https://polygon-mainnet.g.alchemy.com/v2/your-api-key",
+        "explorerUrl": "https://polygonscan.com/address/",
+        "logo": "/icons/polygon.svg"
+      },
+      {
+        "name": "BNB Chain",
+        "prefix": "bnb",
+        "symbol": "BNB",
+        "rpcUrl": "https://bsc-dataseed.binance.org",
+        "explorerUrl": "https://bscscan.com/address/",
+        "logo": "/icons/bnb.svg"
+      },
+      {
+        "name": "Arbitrum",
+        "prefix": "arb",
+        "symbol": "ETH",
+        "rpcUrl": "https://arb-mainnet.g.alchemy.com/v2/your-api-key",
+        "explorerUrl": "https://arbiscan.io/address/",
+        "logo": "/icons/arbitrum.svg"
+      }
+    ]
+  }
+  
