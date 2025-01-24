@@ -5,12 +5,6 @@ import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon }
 import { chains } from '../../data/supportedChain.json';
 import { useChainBalances } from '../../hooks/useChainBalances';
 
-const calculateTotalBalance = (balances) => {
-  return Object.values(balances)
-    .reduce((total, balance) => total + parseFloat(balance), 0)
-    .toFixed(4);
-};
-
 export default function ChainSignatureDashboard({ 
   walletInfo, 
   transactions, 
@@ -71,7 +65,7 @@ export default function ChainSignatureDashboard({
                     <div>
                       <div className="font-medium mb-2">Total Balance</div>
                       <div className="text-sm text-gray-600">
-                        {totalBalance} ETH
+                        {(totalBalance || '0.0000')} ETH
                       </div>
                     </div>
 
@@ -80,7 +74,7 @@ export default function ChainSignatureDashboard({
                       {chains.map((chain) => (
                         <Tooltip 
                           key={chain.prefix}
-                          content={`${chain.name}: ${chainBalances[chain.prefix] || '0'} ETH`}
+                          content={`${chain.name}: ${chainBalances[chain.prefix] || '0.0000'} ETH`}
                         >
                           <Image
                             src={chain.logo}
@@ -187,7 +181,7 @@ export default function ChainSignatureDashboard({
                     </div>
                     <div className="text-right">
                       <div className="font-medium">
-                        {chainBalances[chain.prefix] || '0.0000'} {chain.symbol}
+                        {(chainBalances[chain.prefix] || '0.0000')} {chain.symbol}
                       </div>
                       <Button
                         size="sm"

@@ -2,9 +2,14 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { chains } from '../data/supportedChain.json';
 
+const formatToFourDecimals = (value) => {
+  // Convert to number and fix to 4 decimal places
+  return Number(value).toFixed(4);
+};
+
 export function useChainBalances(evmAddress) {
   const [balances, setBalances] = useState({});
-  const [totalBalance, setTotalBalance] = useState('0');
+  const [totalBalance, setTotalBalance] = useState('0.0000');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -19,19 +24,19 @@ export function useChainBalances(evmAddress) {
         try {
           const provider = new ethers.JsonRpcProvider(chain.rpcUrl);
           const balance = await provider.getBalance(evmAddress);
-          const formattedBalance = ethers.formatEther(balance);
+          const formattedBalance = formatToFourDecimals(ethers.formatEther(balance));
           
           newBalances[chain.prefix] = formattedBalance;
           totalEth += balance;
 
         } catch (chainError) {
           console.error(`Error fetching balance for ${chain.name}:`, chainError);
-          newBalances[chain.prefix] = '0';
+          newBalances[chain.prefix] = '0.0000';
         }
       }
 
       setBalances(newBalances);
-      setTotalBalance(ethers.formatEther(totalEth));
+      setTotalBalance(formatToFourDecimals(ethers.formatEther(totalEth)));
 
     } catch (err) {
       console.error('Error fetching balances:', err);
