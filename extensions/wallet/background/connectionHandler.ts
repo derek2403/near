@@ -1,4 +1,4 @@
-import { ConnectionManager } from '../../sdk/src/connectionManager';
+import { ConnectionManager } from '../../TEMP/sdk/src/connectionManager';
 
 export class ConnectionHandler {
   static async handleConnectionRequest(): Promise<boolean> {

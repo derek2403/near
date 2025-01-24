@@ -1,4 +1,4 @@
-import { TransactionHistory } from '../../sdk/src/types';
+import { TransactionHistory } from '../../TEMP/sdk/src/types';
 
 export class TransactionManager {
   private static readonly STORAGE_KEY = 'near_wallet_transactions';

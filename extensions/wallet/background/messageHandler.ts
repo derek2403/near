@@ -1,7 +1,7 @@
-import { WalletEvent, TransactionParams } from '../../sdk/src/types';
+import { WalletEvent, TransactionParams } from '../../TEMP/sdk/src/types';
 import * as nearAPI from 'near-api-js';
 import { ConnectionHandler } from './connectionHandler';
-import { ConnectionManager } from '../../sdk/src/connectionManager';
+import { ConnectionManager } from '../../TEMP/sdk/src/connectionManager';
 import { TransactionManager } from '../utils/transactionManager';
 
 const { connect, keyStores, utils } = nearAPI;

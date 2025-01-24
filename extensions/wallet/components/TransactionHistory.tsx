@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardBody, Button, Spinner } from "@nextui-org/react";
-import { TransactionHistory as TxHistory } from '../../sdk/src/types';
+import { TransactionHistory as TxHistory } from '../../TEMP/sdk/src/types';
 import { formatDistance } from 'date-fns';
 
 export default function TransactionHistory() {

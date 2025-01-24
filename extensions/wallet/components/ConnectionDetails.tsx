@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardBody, Button, Switch } from "@nextui-org/react";
-import { ConnectionState, ConnectionInfo } from '../../sdk/src/types';
+import { ConnectionState, ConnectionInfo } from '../../TEMP/sdk/src/types';
 
 export default function ConnectionDetails() {
   const [state, setState] = useState<ConnectionState | null>(null);
