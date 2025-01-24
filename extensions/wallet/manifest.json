@@ -1,0 +1,12 @@
+{
+  "externally_connectable": {
+    "matches": ["<all_urls>"]
+  },
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "background/messageHandler.js"
+  }
+} 
