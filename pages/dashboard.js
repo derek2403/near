@@ -188,7 +188,7 @@ export default function Dashboard() {
         setIsDerivingAddress(true);
         setDerivationError('');
 
-        const derivationPath = `evm,1`;
+        const derivationPath = `ethereum,1`;
         const adapter = await setupAdapter({
           accountId: walletInfo.accountId,
           mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID || "v1.signer-prod.testnet",

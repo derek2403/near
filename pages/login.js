@@ -22,7 +22,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showSeedPhrase, setShowSeedPhrase] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
-  const {isOpen, onOpen, onClose} = useDisclosure();
+  const {isOpen, onOpen, onClose: originalOnClose} = useDisclosure();
   const [passwordError, setPasswordError] = useState('');
   const [tempWalletInfo, setTempWalletInfo] = useState(null);
 
@@ -47,7 +47,11 @@ export default function Login() {
   };
 
   const validatePrivateKey = (key) => {
-    return /^ed25519:[A-Za-z0-9]{88}$/.test(key);
+    // Check basic format first (ed25519: followed by 87 or 88 characters)
+    if (!/^ed25519:[A-Za-z0-9]{87,88}$/.test(key)) {
+      return false;
+    }
+    return true;
   };
 
   const handleLogin = async () => {
@@ -99,7 +103,7 @@ export default function Login() {
 
         // Validate private key format
         if (!validatePrivateKey(privateKey)) {
-          throw new Error('Invalid private key format. Must be in format: ed25519:XXXXXXX');
+          throw new Error('Invalid private key format. Must be in format: ed25519:followed by 87-88 characters');
         }
 
         // Create key pair from private key
@@ -175,6 +179,12 @@ export default function Login() {
     // Implementation using proper password hashing
     // This is a placeholder - use proper hashing in production
     return btoa(password);
+  };
+
+  // Create a wrapped onClose handler
+  const onClose = () => {
+    setLoading(false);  // Stop loading state
+    originalOnClose();  // Call the original onClose
   };
 
   return (
