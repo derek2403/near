@@ -104,6 +104,25 @@ chrome.runtime.onMessageExternal.addListener(
           break;
         }
 
+        case 'GET_STATE': {
+          const state = await ConnectionManager.getState();
+          const info = await ConnectionManager.getConnectionInfo();
+          sendResponse({ state, info });
+          break;
+        }
+
+        case 'SWITCH_NETWORK': {
+          await ConnectionManager.switchNetwork(message.network);
+          sendResponse({ success: true });
+          break;
+        }
+
+        case 'UPDATE_PERMISSIONS': {
+          await ConnectionManager.updatePermissions(message.permissions);
+          sendResponse({ success: true });
+          break;
+        }
+
         default:
           sendResponse({ error: 'Unknown message type' });
       }

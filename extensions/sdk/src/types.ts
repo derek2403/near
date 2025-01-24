@@ -40,8 +40,32 @@ export interface TransactionResponse {
   errorMessage?: string;
 }
 
+export interface ConnectionState {
+  connected: boolean;
+  accountId: string | null;
+  network: 'mainnet' | 'testnet';
+  permissions: {
+    viewAccount: boolean;
+    sendTransactions: boolean;
+    signMessages: boolean;
+  };
+}
+
+export interface ConnectionInfo {
+  dapp: {
+    name: string;
+    url: string;
+    icon?: string;
+  };
+  connectedAt: number;
+  lastActive: number;
+}
+
 export type WalletEvent = 
   | { type: 'CONNECT_WALLET' }
   | { type: 'DISCONNECT_WALLET' }
   | { type: 'SEND_TRANSACTION'; params: TransactionParams }
-  | { type: 'CHECK_CONNECTION' }; 
+  | { type: 'CHECK_CONNECTION' }
+  | { type: 'GET_STATE' }
+  | { type: 'SWITCH_NETWORK'; network: 'mainnet' | 'testnet' }
+  | { type: 'UPDATE_PERMISSIONS'; permissions: Partial<ConnectionState['permissions']> }; 
