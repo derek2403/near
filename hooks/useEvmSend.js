@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { setupAdapter } from 'near-ca';
+import { chains } from '../data/supportedChain.json';
 
-// Chain IDs for different networks
-const CHAIN_IDS = {
-  ethereum: 11155111,  // Sepolia testnet
-  optimism: 11155420,  // Optimism testnet
-  base: 84531,        // Base testnet
-  arbitrum: 421614    // Arbitrum testnet
-};
+// Create chain IDs mapping from supportedChain.json
+const CHAIN_IDS = chains.reduce((acc, chain) => ({
+  ...acc,
+  [chain.prefix]: chain.chainId
+}), {});
 
 export function useEvmSend() {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,8 +39,8 @@ export function useEvmSend() {
       // Convert amount from ETH to wei
       const amountInWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
 
-      // Get chain ID
-      const chainId = CHAIN_IDS[selectedChain.prefix];
+      // Get chain ID directly from the selectedChain object
+      const chainId = selectedChain.chainId;
       if (!chainId) {
         throw new Error(`Chain ID not found for ${selectedChain.name}`);
       }
@@ -75,6 +74,7 @@ export function useEvmSend() {
     isLoading,
     error,
     txHash,
-    getExplorerUrl
+    getExplorerUrl,
+    CHAIN_IDS // Export the chain IDs mapping if needed elsewhere
   };
 } 
