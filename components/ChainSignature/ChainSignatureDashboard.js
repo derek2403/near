@@ -1,14 +1,9 @@
 import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab, Image } from "@nextui-org/react";
 import { TokenIcon } from '../../public/icons/TokenIcon';
 import { ActivityIcon } from '../../public/icons/ActivityIcon';
-import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { chains } from '../../data/supportedChain.json';
 import { useChainBalances } from '../../hooks/useChainBalances';
-
-// Added new helper function
-const formatBalance = (balance) => {
-  return balance ? Number(balance).toFixed(4) : '0.0000';
-};
 
 export default function ChainSignatureDashboard({ 
   walletInfo, 
@@ -28,14 +23,8 @@ export default function ChainSignatureDashboard({
   const { 
     balances: chainBalances, 
     totalBalance,
-    refreshBalances,
-    isLoading: isLoadingBalances 
+    refreshBalances 
   } = useChainBalances(evmAddress);
-
-  // Added new function for explorer URL
-  const getExplorerUrl = (address, chain) => {
-    return `${chain.explorerUrl}${address}`;
-  };
 
   return (
     <>
@@ -45,10 +34,8 @@ export default function ChainSignatureDashboard({
           <div className="text-black">
             <div className="text-sm opacity-80 mb-1">Chain Signature Wallet</div>
             
-            {isDerivingAddress || isLoadingBalances ? (
-              <div className="text-center py-4">
-                {isDerivingAddress ? "Deriving EVM address..." : "Loading balances..."}
-              </div>
+            {isDerivingAddress ? (
+              <div className="text-center py-4">Deriving EVM address...</div>
             ) : derivationError ? (
               <div className="text-red-500">{derivationError}</div>
             ) : (
@@ -59,20 +46,18 @@ export default function ChainSignatureDashboard({
                     {/* EVM Address Section */}
                     <div>
                       <div className="font-medium mb-2">Your EVM Address</div>
-                      <div className="text-sm font-mono text-gray-600 flex items-center gap-2">
-                        <span className="truncate">{evmAddress}</span>
-                        <Tooltip content={copied ? "Copied!" : "Copy address"}>
-                          <button
-                            onClick={() => handleCopy(evmAddress)}
-                            className="text-gray-500 hover:text-gray-700"
-                          >
-                            {copied ? (
-                              <ClipboardDocumentCheckIcon className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <ClipboardIcon className="h-4 w-4" />
-                            )}
-                          </button>
-                        </Tooltip>
+                      <div className="text-sm font-mono text-gray-600 flex items-center">
+                        {evmAddress}
+                        <button
+                          onClick={() => handleCopy(evmAddress)}
+                          className="ml-2 text-gray-500 hover:text-gray-700 inline-flex items-center"
+                        >
+                          {copied ? (
+                            <ClipboardDocumentCheckIcon className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <ClipboardIcon className="h-4 w-4" />
+                          )}
+                        </button>
                       </div>
                     </div>
 
@@ -80,7 +65,7 @@ export default function ChainSignatureDashboard({
                     <div>
                       <div className="font-medium mb-2">Total Balance</div>
                       <div className="text-sm text-gray-600">
-                        {formatBalance(totalBalance)} ETH
+                        {(totalBalance || '0.0000')} ETH
                       </div>
                     </div>
 
@@ -89,22 +74,16 @@ export default function ChainSignatureDashboard({
                       {chains.map((chain) => (
                         <Tooltip 
                           key={chain.prefix}
-                          content={`${chain.name}: ${formatBalance(chainBalances[chain.prefix])} ETH`}
+                          content={`${chain.name}: ${chainBalances[chain.prefix] || '0.0000'} ETH`}
                         >
-                          <Button
-                            isIconOnly
-                            variant="light"
-                            className="min-w-unit-10 w-10 h-10"
-                            onPress={() => window.open(getExplorerUrl(evmAddress, chain), '_blank')}
-                          >
-                            <Image
-                              src={chain.logo}
-                              alt={chain.name}
-                              width={24}
-                              height={24}
-                              className="transition-transform hover:scale-110"
-                            />
-                          </Button>
+                          <Image
+                            src={chain.logo}
+                            alt={chain.name}
+                            width={24}
+                            height={24}
+                            className="cursor-pointer transition-transform hover:scale-110"
+                            onClick={() => window.open(`${chain.explorerUrl}${evmAddress}`, '_blank')}
+                          />
                         </Tooltip>
                       ))}
                     </div>
@@ -113,19 +92,18 @@ export default function ChainSignatureDashboard({
               </div>
             )}
 
-            {/* NEAR Account Section */}
-            <div className="mt-4 flex items-center gap-2">
-              <span className="text-sm opacity-80">NEAR Account ID:</span>
-              <span className="font-mono">{walletInfo?.accountId}</span>
-              <Tooltip content={copied ? "Copied!" : "Copy ID"}>
+            <div className="mt-4 flex items-center space-x-2">
+              <div className="text-sm opacity-80">NEAR Account ID:</div>
+              <div className="font-mono">{walletInfo?.accountId}</div>
+              <Tooltip content={copied ? "Copied!" : "Copy to clipboard"}>
                 <button
-                  onClick={() => handleCopy(walletInfo?.accountId)}
-                  className="text-gray-500 hover:text-gray-700"
+                  onPress={() => handleCopy(walletInfo?.accountId)}
+                  className="text-black opacity-80 hover:opacity-100"
                 >
                   {copied ? (
-                    <ClipboardDocumentCheckIcon className="h-4 w-4 text-green-500" />
+                    <ClipboardDocumentCheckIcon className="h-5 w-5" />
                   ) : (
-                    <ClipboardIcon className="h-4 w-4" />
+                    <ClipboardIcon className="h-5 w-5" />
                   )}
                 </button>
               </Tooltip>
