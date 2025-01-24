@@ -15,20 +15,14 @@ import {
 } from "@nextui-org/react";
 import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import Lottie from 'lottie-react';
 import { coins } from '../../data/coins.json';
 import Image from 'next/image';
 import { navigateTo } from '../../utils/navigation';
+import successAnimation from '../../public/animations/success.json';
+import errorAnimation from '../../public/animations/error.json';
 
-const { connect, keyStores } = nearAPI;
-
-interface Coin {
-  key: string;
-  label: string;
-  symbol: string;
-  icon: string;
-  description: string;
-}
+const { connect, keyStores, utils } = nearAPI;
 
 export default function NativeNearSend() {
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
@@ -58,41 +52,40 @@ export default function NativeNearSend() {
     
     try {
       // Get wallet info from Chrome storage
-      const result = await chrome.storage.local.get(['walletInfo']);
-      if (!result.walletInfo) {
+      const walletData = await chrome.storage.local.get(['walletInfo']);
+      if (!walletData.walletInfo) {
         throw new Error('Wallet information not found');
       }
 
-      const walletInfo = result.walletInfo;
+      const walletInfo = walletData.walletInfo;
       
       // Setup connection to NEAR
       const connectionConfig = {
         networkId: "testnet",
         keyStore: new keyStores.InMemoryKeyStore(),
         nodeUrl: "https://rpc.testnet.near.org",
+        walletUrl: "https://wallet.testnet.near.org",
+        helperUrl: "https://helper.testnet.near.org",
+        explorerUrl: "https://explorer.testnet.near.org",
       };
 
-      // Connect to NEAR
       const near = await connect(connectionConfig);
-      
-      // Create keyPair from private key
-      const keyPair = nearAPI.utils.KeyPair.fromString(walletInfo.secretKey);
-      await connectionConfig.keyStore.setKey("testnet", walletInfo.accountId, keyPair);
-
-      // Get account object
       const account = await near.account(walletInfo.accountId);
 
-      // Convert NEAR amount to yoctoNEAR
-      const yoctoAmount = nearAPI.utils.format.parseNearAmount(amount);
+      // Convert NEAR amount to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
+      const yoctoAmount = utils.format.parseNearAmount(amount);
+      if (!yoctoAmount) {
+        throw new Error('Invalid amount');
+      }
 
       // Send transaction
-      const result = await account.sendMoney(
+      const txResult = await account.sendMoney(
         recipientAddress,
         yoctoAmount
       );
 
       // Get transaction hash
-      const txHash = result.transaction.hash;
+      const txHash = txResult.transaction.hash;
       setTxHash(txHash);
       
       // Set success state
@@ -115,9 +108,8 @@ export default function NativeNearSend() {
     return (
       <div className="min-h-[600px] p-6 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-48 h-48 mb-6">
-          <DotLottieReact
-            src="https://lottie.host/de3a77dc-d723-4462-a832-e2928836c922/7LKOuBzujP.lottie"
-            autoplay
+          <Lottie
+            animationData={successAnimation}
             loop={false}
           />
         </div>
@@ -186,9 +178,8 @@ export default function NativeNearSend() {
     return (
       <div className="min-h-[600px] p-6 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-48 h-48 mb-6">
-          <DotLottieReact
-            src="https://lottie.host/f971bfe3-8fe1-4deb-affa-1c78011f4daa/VNtlmMxARH.lottie"
-            autoplay
+          <Lottie
+            animationData={errorAnimation}
             loop={false}
           />
         </div>

@@ -3,8 +3,8 @@ import { parseSeedPhrase } from "near-seed-phrase";
 import * as nearAPI from "near-api-js";
 import { Card, CardBody, Button, Input, Tabs, Tab } from "@nextui-org/react";
 import { navigateTo } from '../utils/navigation';
-import { LockIcon } from '../public/icons/LockIcon';
 import CreatePassword from '../components/CreatePassword';
+import { WalletInfo } from '../types';
 
 const { connect, keyStores } = nearAPI;
 
@@ -15,21 +15,21 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [loginMethod, setLoginMethod] = useState<'seedPhrase' | 'privateKey'>('seedPhrase');
-  const [walletToEncrypt, setWalletToEncrypt] = useState<any>(null);
+  const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
 
-  const handleLogin = async (password: string) => {
+  const handleLogin = async (_password: string) => {
     setError('');
     setIsLoading(true);
 
     try {
-      if (!walletToEncrypt) {
+      if (!walletInfo) {
         throw new Error('No wallet information to encrypt');
       }
 
       // Store wallet info in Chrome storage
       await chrome.storage.local.set({
         walletInfo: {
-          ...walletToEncrypt,
+          ...walletInfo,
           loginMethod
         }
       });
@@ -72,7 +72,7 @@ export default function Login() {
         const pubKey = keyPair.getPublicKey();
         accountId = Buffer.from(pubKey.data).toString('hex');
 
-        setWalletToEncrypt({
+        setWalletInfo({
           accountId,
           publicKey: publicKey,
           secretKey: secretKey,
@@ -88,7 +88,7 @@ export default function Login() {
         const pubKey = keyPair.getPublicKey();
         accountId = Buffer.from(pubKey.data).toString('hex');
 
-        setWalletToEncrypt({
+        setWalletInfo({
           accountId,
           publicKey: pubKey.toString(),
           secretKey: privateKey

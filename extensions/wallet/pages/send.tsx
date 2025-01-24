@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useState, useEffect } from 'react';
 import NativeNearSend from '../components/NativeNear/NativeNearSend';
 import ChainSignatureSend from '../components/ChainSignature/ChainSignatureSend';
 

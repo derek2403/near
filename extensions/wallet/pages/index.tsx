@@ -1,33 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Input, Button, Card, CardBody } from "@nextui-org/react";
+import { Button, Card, CardBody } from "@nextui-org/react";
 import CreateWallet from './createWallet';
 import Login from './login';
-import type { Page } from '../utils/navigation';
 import { navigateTo } from '../utils/navigation';
 import Dashboard from './dashboard';
-
-interface WalletInfo {
-  address: string;
-  balance: string;
-  // Add other wallet properties as needed
-}
+import { WalletInfo } from '../types';
 
 export default function Home() {
-  const [currentPage, setCurrentPage] = useState<Page>('home');
-  const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [currentPage, setCurrentPage] = useState<string>('home');
 
   useEffect(() => {
-    // Listen for page changes
-    chrome.storage.local.get(['currentPage'], (result) => {
-      if (result.currentPage) {
+    // Check for existing wallet and intended destination
+    chrome.storage.local.get(['walletInfo', 'currentPage', 'intendedDestination'], (result) => {
+      if (result.walletInfo) {
+        // If user is authenticated and there's an intended destination, go there
+        if (result.intendedDestination) {
+          navigateTo(result.intendedDestination);
+          chrome.storage.local.remove(['intendedDestination']);
+        } else if (result.currentPage && result.currentPage !== 'home') {
+          // Stay on current page if it's not home
+          setCurrentPage(result.currentPage);
+        } else {
+          // Default to dashboard if authenticated
+          navigateTo('dashboard');
+        }
+      } else if (result.currentPage && !['dashboard', 'send', 'receive', 'settings'].includes(result.currentPage)) {
+        // Only allow non-protected routes when not authenticated
         setCurrentPage(result.currentPage);
       }
     });
 
-    // Add storage change listener
+    // Listen for page changes
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }) => {
       if (changes.currentPage) {
         setCurrentPage(changes.currentPage.newValue);
@@ -47,30 +50,6 @@ export default function Home() {
       setWalletInfo(JSON.parse(publicInfo));
     }
   }, []);
-
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoginError('');
-
-    try {
-      const storedHash = localStorage.getItem('passwordHash');
-      const inputHash = await hashPassword(password);
-
-      if (inputHash === storedHash) {
-        const encryptedWallet = localStorage.getItem('encryptedWallet');
-        if (encryptedWallet) {
-          const decryptedWallet = await decryptWalletData(encryptedWallet, password);
-          setWalletInfo(decryptedWallet);
-          setIsLoggedIn(true);
-        }
-      } else {
-        setLoginError('Incorrect password');
-      }
-    } catch (error) {
-      setLoginError('Error accessing wallet');
-      console.error(error);
-    }
-  };
 
   // Render different pages based on currentPage
   if (currentPage === 'createWallet') {
@@ -119,17 +98,4 @@ export default function Home() {
       </Card>
     </div>
   );
-}
-
-// Utility functions for decryption
-const decryptWalletData = async (encryptedData: string, password: string): Promise<WalletInfo> => {
-  // Implementation using proper decryption
-  // This is a placeholder - use proper decryption in production
-  return JSON.parse(atob(encryptedData)).data;
-};
-
-const hashPassword = async (password: string): Promise<string> => {
-  // Implementation using proper password hashing
-  // This is a placeholder - use proper hashing in production
-  return btoa(password);
-}; 
+} 
