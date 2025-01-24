@@ -10,10 +10,15 @@ async function handleTransaction(params: TransactionParams) {
       throw new Error('No wallet found');
     }
 
+    // Create key store and load the account key
+    const keyStore = new keyStores.InMemoryKeyStore();
+    const keyPair = nearAPI.utils.KeyPair.fromString(walletInfo.secretKey);
+    await keyStore.setKey("testnet", walletInfo.accountId, keyPair);
+
     // Setup connection to NEAR
     const connectionConfig = {
       networkId: "testnet",
-      keyStore: new keyStores.InMemoryKeyStore(),
+      keyStore,
       nodeUrl: "https://rpc.testnet.near.org",
       walletUrl: "https://wallet.testnet.near.org",
       helperUrl: "https://helper.testnet.near.org",
@@ -47,6 +52,7 @@ async function handleTransaction(params: TransactionParams) {
   }
 }
 
+// Handle messages from external sources
 chrome.runtime.onMessageExternal.addListener(
   async (message: WalletEvent, sender, sendResponse) => {
     try {
@@ -70,18 +76,8 @@ chrome.runtime.onMessageExternal.addListener(
           break;
         }
 
-        case 'SIGN_MESSAGE': {
-          // Implement message signing
-          break;
-        }
-
-        case 'GET_ACCOUNT_STATE': {
-          // Implement account state retrieval
-          break;
-        }
-
         case 'DISCONNECT_WALLET':
-          // Handle disconnect
+          // Clear any session data if needed
           sendResponse({ success: true });
           break;
 
@@ -93,5 +89,12 @@ chrome.runtime.onMessageExternal.addListener(
         error: error instanceof Error ? error.message : 'Unknown error' 
       });
     }
+    return true; // Required for async response
   }
-); 
+);
+
+// Handle messages from the popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Handle internal extension messages here
+  return true;
+}); 

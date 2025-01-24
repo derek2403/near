@@ -1,0 +1,12 @@
+{
+  "name": "near-wallet-demo",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "parcel index.html",
+    "build": "parcel build index.html"
+  },
+  "devDependencies": {
+    "parcel": "^2.11.0",
+    "typescript": "^5.3.3"
+  }
+} 
