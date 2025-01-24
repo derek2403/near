@@ -9,13 +9,18 @@
     "activeTab"
   ],
   "externally_connectable": {
-    "matches": ["<all_urls>"]
+    "matches": [
+      "*://*.near.org/*",
+      "*://localhost/*",
+      "*://127.0.0.1/*"
+    ],
+    "accepts_tls_channel_id": false
   },
   "background": {
     "service_worker": "background/messageHandler.js"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "index.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

@@ -1,26 +1,31 @@
 import { WalletResponse, TransactionParams, TransactionResponse, WalletEvent } from './types';
 
-export class NearWalletSDK {
+export class NearWalletConnector {
   private connected: boolean;
   private accountId: string | null;
-  private extensionId: string;
+  private readonly extensionId: string;
 
-  constructor() {
+  constructor(extensionId: string) {
+    if (!extensionId) {
+      throw new Error('Extension ID is required');
+    }
+    this.extensionId = extensionId;
     this.connected = false;
     this.accountId = null;
-    // Your extension ID - this should be configurable or auto-detected
-    this.extensionId = 'your-extension-id'; // This will be replaced during build
   }
 
   private async sendMessage(event: WalletEvent): Promise<any> {
-    // First try to connect to the extension
     if (!chrome.runtime?.id) {
       // If running in browser, open extension popup
-      window.open(
-        `chrome-extension://${this.extensionId}/popup.html`,
+      const popup = window.open(
+        `chrome-extension://${this.extensionId}/index.html`,
         'NEAR Wallet',
         'width=360,height=600'
       );
+
+      if (!popup) {
+        throw new Error('Failed to open wallet popup. Please check your popup blocker settings.');
+      }
 
       // Wait for response via window message
       return new Promise((resolve, reject) => {
@@ -63,16 +68,6 @@ export class NearWalletSDK {
     }
   }
 
-  async disconnect(): Promise<void> {
-    try {
-      await this.sendMessage({ type: 'DISCONNECT_WALLET' });
-      this.connected = false;
-      this.accountId = null;
-    } catch (error) {
-      throw new Error(`Failed to disconnect wallet: ${error}`);
-    }
-  }
-
   async sendTransaction(params: TransactionParams): Promise<TransactionResponse> {
     if (!this.connected) {
       throw new Error('Wallet not connected');
@@ -89,10 +84,21 @@ export class NearWalletSDK {
       }
 
       return {
-        transactionHash: response.transactionHash
+        transactionHash: response.transactionHash,
+        status: response.status
       };
     } catch (error) {
       throw new Error(`Transaction failed: ${error}`);
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    try {
+      await this.sendMessage({ type: 'DISCONNECT_WALLET' });
+      this.connected = false;
+      this.accountId = null;
+    } catch (error) {
+      throw new Error(`Failed to disconnect wallet: ${error}`);
     }
   }
 
