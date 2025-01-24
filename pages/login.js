@@ -22,7 +22,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showSeedPhrase, setShowSeedPhrase] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
-  const {isOpen, onOpen, onClose} = useDisclosure();
+  const {isOpen, onOpen, onClose: originalOnClose} = useDisclosure();
   const [passwordError, setPasswordError] = useState('');
   const [tempWalletInfo, setTempWalletInfo] = useState(null);
 
@@ -179,6 +179,12 @@ export default function Login() {
     // Implementation using proper password hashing
     // This is a placeholder - use proper hashing in production
     return btoa(password);
+  };
+
+  // Create a wrapped onClose handler
+  const onClose = () => {
+    setLoading(false);  // Stop loading state
+    originalOnClose();  // Call the original onClose
   };
 
   return (
