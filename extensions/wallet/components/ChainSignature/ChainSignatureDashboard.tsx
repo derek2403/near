@@ -4,27 +4,20 @@ import { TokenIcon } from '../../public/icons/TokenIcon';
 import { ActivityIcon } from '../../public/icons/ActivityIcon';
 import { chains } from '../../data/supportedChain.json';
 import Image from 'next/image';
-import { Page } from '../../utils/navigation';
+import { WalletInfo, Transaction, PaginationProps } from '../../types';
 
 interface Props {
-  balance: string;
-  walletInfo: {
-    accountId: string;
-    publicKey: string;
-  };
-  transactions: any[];
-  isLoadingTxns: boolean;
+  _balance: string;
+  walletInfo: WalletInfo;
+  _transactions: Transaction[];
+  _isLoadingTxns: boolean;
   copied: boolean;
   handleCopy: (text: string) => void;
-  formatDate: (timestamp: number) => string;
-  getTransactionType: (tx: any) => string;
-  getTransactionAmount: (tx: any) => string;
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
-  };
-  navigateTo: (page: Page | `${Page}?${string}`) => void;
+  _formatDate: (timestamp: number) => string;
+  _getTransactionType: (tx: Transaction) => string;
+  _getTransactionAmount: (tx: Transaction) => string;
+  _pagination: PaginationProps;
+  navigateTo: (page: string) => void;
   evmAddress: string;
   isDerivingAddress: boolean;
   derivationError: string;
@@ -38,17 +31,17 @@ const calculateTotalBalance = (balances: Record<string, string>) => {
 };
 
 export default function ChainSignatureDashboard({ 
-  balance, 
+  _balance, 
   walletInfo, 
-  transactions,
-  isLoadingTxns,
+  _transactions,
+  _isLoadingTxns,
   copied,
   handleCopy,
-  formatDate,
-  getTransactionType,
-  getTransactionAmount,
+  _formatDate,
+  _getTransactionType,
+  _getTransactionAmount,
   navigateTo,
-  pagination,
+  _pagination,
   evmAddress,
   isDerivingAddress,
   derivationError,

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NEAR Wallet Demo</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 4px;
+      border: none;
+      background: #0072CE;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0061AF;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success { background: #E8F5E9; }
+    .error { background: #FFEBEE; }
+  </style>
+</head>
+<body>
+  <h1>NEAR Wallet Demo</h1>
+  <div>
+    <button id="connectBtn">Connect Wallet</button>
+    <button id="sendBtn" disabled>Send 1 NEAR</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+  </div>
+  <div id="status"></div>
+  <script src="./index.js"></script>
+</body>
+</html> 

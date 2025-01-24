@@ -1,23 +1,19 @@
 import { Card, CardBody, Button, Tooltip } from "@nextui-org/react";
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
-import { Page } from '../../utils/navigation';
+import { WalletInfo, Transaction, PaginationProps } from '../../types';
 
 interface Props {
   balance: string;
-  walletInfo: any;
-  transactions: any[];
+  walletInfo: WalletInfo;
+  transactions: Transaction[];
   isLoadingTxns: boolean;
   copied: boolean;
   handleCopy: (text: string) => void;
   formatDate: (timestamp: number) => string;
-  getTransactionType: (tx: any) => string;
-  getTransactionAmount: (tx: any) => string;
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
-  };
-  navigateTo: (page: Page | `${Page}?${string}`) => void;
+  getTransactionType: (tx: Transaction) => string;
+  getTransactionAmount: (tx: Transaction) => string;
+  _pagination: PaginationProps;
+  navigateTo: (page: string) => void;
 }
 
 export default function NativeNearDashboard({ 
@@ -30,7 +26,7 @@ export default function NativeNearDashboard({
   formatDate,
   getTransactionType,
   getTransactionAmount,
-  pagination,
+  _pagination,
   navigateTo
 }: Props) {
   return (
@@ -69,7 +65,16 @@ export default function NativeNearDashboard({
           size="lg"
           color="primary"
           startContent={<ArrowUpIcon className="h-5 w-5" />}
-          onPress={() => navigateTo('send?mode=native' as const)}
+          onPress={() => {
+            // Check authentication before navigation
+            chrome.storage.local.get(['walletInfo'], (result) => {
+              if (result.walletInfo) {
+                navigateTo('send?mode=native');
+              } else {
+                navigateTo('login');
+              }
+            });
+          }}
           className="h-16 shadow-sm"
         >
           <div className="flex flex-col items-start">

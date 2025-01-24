@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
+    "@lottiefiles/dotlottie-react": "^0.12.1",
     "@next/swc-darwin-arm64": "^15.1.5",
     "@nextui-org/react": "^2.1.7",
     "ethers": "^6.13.5",

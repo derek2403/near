@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import * as nearAPI from "near-api-js";
 import { generateSeedPhrase } from "near-seed-phrase";
 import { EyeIcon, EyeSlashIcon, ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
 import { Input, Button, Card, CardBody, Spinner } from "@nextui-org/react";
 import { navigateTo } from '../utils/navigation';
 import CreatePassword from '../components/CreatePassword';
+import { WalletInfo } from '../types';
 
-const { connect, keyStores, KeyPair } = nearAPI;
+const { connect, keyStores } = nearAPI;
 
 export default function CreateWallet() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [walletInfo, setWalletInfo] = useState<any>(null);
+  const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [accountId, setAccountId] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
@@ -24,7 +25,7 @@ export default function CreateWallet() {
     accountId: false
   });
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [walletToEncrypt, setWalletToEncrypt] = useState<any>(null);
+  const [walletToEncrypt, setWalletToEncrypt] = useState<WalletInfo | null>(null);
 
   const checkAccountAvailability = async () => {
     try {
@@ -66,55 +67,9 @@ export default function CreateWallet() {
     }
   };
 
-  const generateWallet = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { seedPhrase, secretKey, publicKey } = generateSeedPhrase();
-      const fullAccountId = `${accountId}.testnet`;
-
-      // Initialize NEAR connection
-      const connectionConfig = {
-        networkId: "testnet",
-        keyStore: new keyStores.InMemoryKeyStore(),
-        nodeUrl: "https://rpc.testnet.near.org",
-        walletUrl: "https://testnet.mynearwallet.com/",
-        helperUrl: "https://helper.testnet.near.org",
-        explorerUrl: "https://testnet.nearblocks.io"
-      };
-
-      const near = await connect(connectionConfig);
-      const keyPair = KeyPair.fromString(secretKey);
-      const keyStore = new keyStores.InMemoryKeyStore();
-      await keyStore.setKey("testnet", fullAccountId, keyPair);
-
-      // Create wallet info object
-      const newWalletInfo = {
-        accountId: fullAccountId,
-        seedPhrase,
-        publicKey,
-        secretKey
-      };
-
-      setWalletInfo(newWalletInfo);
-
-      // Store the wallet info in extension storage
-      chrome.storage.local.set({ 
-        walletInfo: newWalletInfo,
-      }, () => {
-        console.log('Wallet info stored');
-      });
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred');
-      console.error('Create wallet error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCopy = async (text: string, field: keyof typeof copiedStates) => {
+  const handleCopy = async (text: string | undefined, field: keyof typeof copiedStates) => {
+    if (!text) return;
+    
     try {
       await navigator.clipboard.writeText(text);
       setCopiedStates(prev => ({ ...prev, [field]: true }));
@@ -139,7 +94,7 @@ export default function CreateWallet() {
     return '';
   };
 
-  const handleCreateWallet = async (password: string) => {
+  const handleCreateWallet = async (_password: string) => {
     setError('');
     setLoading(true);
 
@@ -148,7 +103,6 @@ export default function CreateWallet() {
         throw new Error('No wallet information to encrypt');
       }
 
-      // Store wallet info in Chrome storage
       await chrome.storage.local.set({
         walletInfo: {
           ...walletToEncrypt,
