@@ -12,6 +12,21 @@ export class NearWalletConnector {
     this.extensionId = extensionId;
     this.connected = false;
     this.accountId = null;
+
+    // Check for existing connection
+    this.checkExistingConnection();
+  }
+
+  private async checkExistingConnection(): Promise<void> {
+    try {
+      const response = await this.sendMessage({ type: 'CHECK_CONNECTION' });
+      if (response.connected) {
+        this.connected = true;
+        this.accountId = response.accountId;
+      }
+    } catch (error) {
+      console.error('Failed to check connection:', error);
+    }
   }
 
   private async sendMessage(event: WalletEvent): Promise<any> {

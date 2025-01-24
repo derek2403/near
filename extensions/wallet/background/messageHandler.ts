@@ -1,5 +1,7 @@
 import { WalletEvent, TransactionParams } from '../../sdk/src/types';
 import * as nearAPI from 'near-api-js';
+import { ConnectionHandler } from './connectionHandler';
+import { ConnectionManager } from '../../sdk/src/connectionManager';
 
 const { connect, keyStores, utils } = nearAPI;
 
@@ -56,13 +58,23 @@ async function handleTransaction(params: TransactionParams) {
 chrome.runtime.onMessageExternal.addListener(
   async (message: WalletEvent, sender, sendResponse) => {
     try {
+      const origin = sender.origin || '';
+
       switch (message.type) {
         case 'CONNECT_WALLET': {
+          // Handle connection request
+          const isApproved = await ConnectionHandler.handleConnectionRequest(origin, sender);
+          if (!isApproved) {
+            sendResponse({ error: 'Connection rejected' });
+            return;
+          }
+
           const { walletInfo } = await chrome.storage.local.get(['walletInfo']);
           if (!walletInfo) {
             sendResponse({ error: 'No wallet found' });
             return;
           }
+
           sendResponse({
             accountId: walletInfo.accountId,
             publicKey: walletInfo.publicKey
@@ -71,12 +83,19 @@ chrome.runtime.onMessageExternal.addListener(
         }
 
         case 'SEND_TRANSACTION': {
+          // Check if connected
+          if (!await ConnectionManager.isConnected(origin)) {
+            sendResponse({ error: 'Not connected' });
+            return;
+          }
+
           const result = await handleTransaction(message.params);
           sendResponse(result);
           break;
         }
 
         case 'DISCONNECT_WALLET':
+          await ConnectionManager.removeConnection(origin);
           sendResponse({ success: true });
           break;
 
