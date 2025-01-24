@@ -2,6 +2,7 @@ import { WalletEvent, TransactionParams } from '../../sdk/src/types';
 import * as nearAPI from 'near-api-js';
 import { ConnectionHandler } from './connectionHandler';
 import { ConnectionManager } from '../../sdk/src/connectionManager';
+import { TransactionManager } from '../utils/transactionManager';
 
 const { connect, keyStores, utils } = nearAPI;
 
@@ -42,14 +43,38 @@ async function handleTransaction(params: TransactionParams) {
       yoctoAmount
     );
 
+    // Record the transaction
+    await TransactionManager.addTransaction({
+      hash: result.transaction.hash,
+      type: 'send',
+      status: 'success',
+      from: walletInfo.accountId,
+      to: params.receiverId,
+      amount: params.amount,
+      network: state.network,
+      methodName: params.methodName,
+      args: params.args
+    });
+
     return {
       transactionHash: result.transaction.hash,
       status: 'success'
     };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Transaction failed';
+    
+    // Record failed transaction
+    if (result?.transaction?.hash) {
+      await TransactionManager.updateTransactionStatus(
+        result.transaction.hash,
+        'failure',
+        errorMessage
+      );
+    }
+
     return {
       status: 'failure',
-      errorMessage: error instanceof Error ? error.message : 'Transaction failed'
+      errorMessage
     };
   }
 }
@@ -119,6 +144,18 @@ chrome.runtime.onMessageExternal.addListener(
 
         case 'UPDATE_PERMISSIONS': {
           await ConnectionManager.updatePermissions(message.permissions);
+          sendResponse({ success: true });
+          break;
+        }
+
+        case 'GET_TRANSACTION_HISTORY': {
+          const transactions = await TransactionManager.getTransactions();
+          sendResponse({ transactions });
+          break;
+        }
+
+        case 'CLEAR_TRANSACTION_HISTORY': {
+          await TransactionManager.clearTransactions();
           sendResponse({ success: true });
           break;
         }
