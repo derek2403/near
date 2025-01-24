@@ -1,3 +1,10 @@
+export interface WalletInfo {
+  accountId: string;
+  publicKey: string;
+  secretKey: string;
+  seedPhrase?: string;
+}
+
 export interface WalletResponse {
   accountId: string;
   publicKey: string;

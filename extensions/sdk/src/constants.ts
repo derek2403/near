@@ -1,6 +1,6 @@
 export const DEFAULT_NETWORK_CONFIG = {
   testnet: {
-    networkId: 'testnet',
+    networkId: 'testnet' as const,
     nodeUrl: 'https://rpc.testnet.near.org',
     walletUrl: 'https://wallet.testnet.near.org',
     helperUrl: 'https://helper.testnet.near.org',

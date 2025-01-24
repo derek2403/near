@@ -77,7 +77,6 @@ chrome.runtime.onMessageExternal.addListener(
         }
 
         case 'DISCONNECT_WALLET':
-          // Clear any session data if needed
           sendResponse({ success: true });
           break;
 
@@ -89,7 +88,7 @@ chrome.runtime.onMessageExternal.addListener(
         error: error instanceof Error ? error.message : 'Unknown error' 
       });
     }
-    return true; // Required for async response
+    return true;
   }
 );
 
