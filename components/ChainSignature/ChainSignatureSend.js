@@ -19,6 +19,7 @@ import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
 import { chains } from '../../data/supportedChain.json';
+import { useEvmSend } from '../../hooks/useEvmSend';
 
 const { connect, keyStores } = nearAPI;
 
@@ -48,6 +49,14 @@ export default function ChainSignatureSend() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedChain, setSelectedChain] = useState(chains[0]);
 
+  const { 
+    sendTransaction, 
+    isLoading: isSending, 
+    error: sendError, 
+    txHash: evmTxHash,
+    getExplorerUrl 
+  } = useEvmSend();
+
   const handleAmountChange = (e) => {
     const value = e.target.value;
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
@@ -60,10 +69,9 @@ export default function ChainSignatureSend() {
     setError(null);
     setIsError(false);
     setErrorMessage('');
-    setIsLoading(true);
     
     try {
-      // Get sender's wallet info from localStorage
+      // Get wallet info from localStorage
       const publicInfo = localStorage.getItem('publicWalletInfo');
       const encryptedWallet = localStorage.getItem('encryptedWallet');
       
@@ -73,51 +81,28 @@ export default function ChainSignatureSend() {
 
       const parsedInfo = JSON.parse(publicInfo);
       const decryptedWallet = JSON.parse(atob(encryptedWallet));
-      
-      // Setup connection to NEAR
-      const connectionConfig = {
-        networkId: "testnet",
-        keyStore: new keyStores.InMemoryKeyStore(),
-        nodeUrl: "https://rpc.testnet.near.org",
-      };
 
-      // Connect to NEAR
-      const near = await connect(connectionConfig);
-      
-      // Create keyPair from private key
-      const keyPair = nearAPI.utils.KeyPair.fromString(decryptedWallet.data.secretKey);
-      await connectionConfig.keyStore.setKey("testnet", parsedInfo.accountId, keyPair);
+      // Send the transaction using the hook
+      const result = await sendTransaction({
+        accountId: parsedInfo.accountId,
+        secretKey: decryptedWallet.data.secretKey,
+        recipientAddress,
+        amount,
+        selectedChain
+      });
 
-      // Get account object
-      const account = await near.account(parsedInfo.accountId);
-
-      // Convert NEAR amount to yoctoNEAR
-      const yoctoAmount = nearAPI.utils.format.parseNearAmount(amount);
-
-      // Send transaction
-      const result = await account.sendMoney(
-        recipientAddress, // receiver account
-        yoctoAmount // amount in yoctoNEAR
-      );
-
-      // Get transaction hash
-      const txHash = result.transaction.hash;
-      setTxHash(txHash);
-      
-      // Set success state
-      setIsSuccess(true);
+      if (result.success) {
+        setIsSuccess(true);
+      } else {
+        setIsError(true);
+        setErrorMessage(result.error);
+      }
 
     } catch (err) {
       console.error('Transaction error:', err);
       setErrorMessage(err.message || 'Failed to send transaction');
       setIsError(true);
-    } finally {
-      setIsLoading(false);
     }
-  };
-
-  const getExplorerUrl = (hash) => {
-    return `https://testnet.nearblocks.io/txns/${hash}`;
   };
 
   if (isSuccess) {
@@ -149,12 +134,12 @@ export default function ChainSignatureSend() {
               </p>
               <p className="text-sm flex items-center justify-center gap-2">
                 <span className="text-gray-500">Transaction Hash:</span>{' '}
-                <span className="font-medium">{txHash}</span>
+                <span className="font-medium">{evmTxHash}</span>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => window.open(getExplorerUrl(txHash), '_blank')}
+                  onPress={() => window.open(getExplorerUrl(evmTxHash, selectedChain), '_blank')}
                   className="min-w-unit-8 w-8 h-8"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
@@ -339,11 +324,11 @@ export default function ChainSignatureSend() {
               color="primary"
               className="w-full"
               size="lg"
-              isDisabled={!amount || !recipientAddress || isLoading}
-              isLoading={isLoading}
+              isDisabled={!amount || !recipientAddress || isSending}
+              isLoading={isSending}
               spinner={<Spinner color="white" size="sm" />}
             >
-              {isLoading ? 'Sending...' : 'Continue'}
+              {isSending ? 'Sending...' : 'Continue'}
             </Button>
           </form>
         </CardBody>
