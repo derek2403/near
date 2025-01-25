@@ -1,10 +1,13 @@
-import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab, Image } from "@nextui-org/react";
+import { Card, CardBody, Button, Tooltip, Pagination, Tabs, Tab } from "@nextui-org/react";
 import { TokenIcon } from '../../public/icons/TokenIcon';
 import { ActivityIcon } from '../../public/icons/ActivityIcon';
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { chains } from '../../data/supportedChain.json';
 import { useChainBalances } from '../../hooks/useChainBalances';
+
 import { useEvmDerivation } from '../../hooks/useEvmDerivation';
+
+import Image from 'next/image';
 
 export default function ChainSignatureDashboard({ 
   walletInfo, 
@@ -183,10 +186,12 @@ export default function ChainSignatureDashboard({
                 {chains.map((chain) => (
                   <div key={chain.prefix} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
                     <div className="flex items-center gap-3">
-                      <img 
-                        src={chain.logo} 
-                        alt={chain.name} 
-                        className="w-8 h-8"
+                      <Image
+                        src={chain.logo}
+                        alt={chain.name}
+                        width={24}
+                        height={24}
+                        className="cursor-pointer transition-transform hover:scale-110"
                       />
                       <div>
                         <div className="font-medium">{chain.name}</div>
