@@ -4,6 +4,7 @@ import { ActivityIcon } from '../../public/icons/ActivityIcon';
 import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { chains } from '../../data/supportedChain.json';
 import { useChainBalances } from '../../hooks/useChainBalances';
+import { useEvmDerivation } from '../../hooks/useEvmDerivation';
 
 export default function ChainSignatureDashboard({ 
   walletInfo, 
@@ -16,15 +17,22 @@ export default function ChainSignatureDashboard({
   getTransactionAmount,
   router,
   pagination,
-  evmAddress,
+  evmAddress: propEvmAddress,
   isDerivingAddress,
   derivationError,
 }) {
   const { 
+    evmAddress: derivedEvmAddress,
+    isDerivingAddress: isDeriving,
+    derivationError: deriveError,
+    chainBalances: derivedChainBalances
+  } = useEvmDerivation(walletInfo);
+
+  const { 
     balances: chainBalances, 
     totalBalance,
     refreshBalances 
-  } = useChainBalances(evmAddress);
+  } = useChainBalances(propEvmAddress);
 
   return (
     <>
@@ -34,10 +42,10 @@ export default function ChainSignatureDashboard({
           <div className="text-black">
             <div className="text-sm opacity-80 mb-1">Chain Signature Wallet</div>
             
-            {isDerivingAddress ? (
+            {isDeriving ? (
               <div className="text-center py-4">Deriving EVM address...</div>
-            ) : derivationError ? (
-              <div className="text-red-500">{derivationError}</div>
+            ) : deriveError ? (
+              <div className="text-red-500">{deriveError}</div>
             ) : (
               <div className="space-y-4">
                 {/* EVM Address Card */}
@@ -47,9 +55,9 @@ export default function ChainSignatureDashboard({
                     <div>
                       <div className="font-medium mb-2">Your EVM Address</div>
                       <div className="text-sm font-mono text-gray-600 flex items-center">
-                        {evmAddress}
+                        {propEvmAddress}
                         <button
-                          onClick={() => handleCopy(evmAddress)}
+                          onClick={() => handleCopy(propEvmAddress)}
                           className="ml-2 text-gray-500 hover:text-gray-700 inline-flex items-center"
                         >
                           {copied ? (
@@ -82,7 +90,7 @@ export default function ChainSignatureDashboard({
                             width={24}
                             height={24}
                             className="cursor-pointer transition-transform hover:scale-110"
-                            onClick={() => window.open(`${chain.explorerUrl}${evmAddress}`, '_blank')}
+                            onClick={() => window.open(`${chain.explorerUrl}${propEvmAddress}`, '_blank')}
                           />
                         </Tooltip>
                       ))}
@@ -118,7 +126,13 @@ export default function ChainSignatureDashboard({
           size="lg"
           color="primary"
           startContent={<ArrowUpIcon className="h-5 w-5" />}
-          onPress={() => router.push('/send?mode=chain')}
+          onPress={() => router.push({
+            pathname: '/send',
+            query: { 
+              mode: 'chain',
+              evmAddress: derivedEvmAddress 
+            }
+          })}
           className="h-20"
         >
           <div className="flex flex-col items-start w-full">
@@ -186,7 +200,7 @@ export default function ChainSignatureDashboard({
                       <Button
                         size="sm"
                         variant="light"
-                        onPress={() => window.open(`${chain.explorerUrl}${evmAddress}`, '_blank')}
+                        onPress={() => window.open(`${chain.explorerUrl}${propEvmAddress}`, '_blank')}
                       >
                         View
                       </Button>

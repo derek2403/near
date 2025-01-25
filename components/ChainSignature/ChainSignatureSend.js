@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { 
   Card, 
@@ -49,7 +49,57 @@ export default function ChainSignatureSend() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedChain, setSelectedChain] = useState(chains[0]);
+  const { evmAddress: routerEvmAddress } = router.query;  // Get address from router
 
+  // Use the passed address or derive it if needed
+  const [evmAddress, setEvmAddress] = useState(() => {
+    // First try to get from router query
+    if (routerEvmAddress) {
+      return routerEvmAddress;
+    }
+    
+    // Fallback to localStorage if needed
+    try {
+      const walletInfo = localStorage.getItem('publicWalletInfo');
+      if (!walletInfo) {
+        console.log('No wallet info found in localStorage');
+        return null;
+      }
+      const parsed = JSON.parse(walletInfo);
+      
+      // If we have walletInfo, derive the address
+      if (parsed.accountId) {
+        // You might want to move this to a useEffect if it's async
+        return parsed.evmAddress || null;
+      }
+      return null;
+    } catch (err) {
+      console.error('Error getting EVM address:', err);
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    // If we don't have an address, redirect back to dashboard
+    if (!evmAddress) {
+      console.error('No EVM address available');
+      router.push('/dashboard');
+    }
+  }, [evmAddress, router]);
+
+  // Log for debugging
+  useEffect(() => {
+    console.log('Router EVM Address:', routerEvmAddress);
+    console.log('Current EVM Address:', evmAddress);
+  }, [routerEvmAddress, evmAddress]);
+
+  // Log the initial state
+  useEffect(() => {
+    console.log('Current evmAddress:', evmAddress);
+    console.log('Raw localStorage data:', localStorage.getItem('publicWalletInfo'));
+  }, []);
+
+  // Add back the useEvmSend hook
   const { 
     sendTransaction, 
     isLoading: isSending, 
@@ -58,11 +108,17 @@ export default function ChainSignatureSend() {
     getExplorerUrl 
   } = useEvmSend();
 
-  const { balances } = useChainBalances(
-    localStorage.getItem('publicWalletInfo') 
-      ? JSON.parse(localStorage.getItem('publicWalletInfo')).evmAddress 
-      : null
-  );
+  const { 
+    balances,
+    totalBalance,
+    refreshBalances 
+  } = useChainBalances(evmAddress);
+
+  console.log('EVM Address from localStorage:', evmAddress);
+  console.log('All Balances:', balances);
+  console.log('Selected Chain:', selectedChain);
+  console.log('Selected Chain Balance:', balances[selectedChain.prefix]);
+  console.log('Total Balance:', totalBalance);
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
@@ -111,6 +167,19 @@ export default function ChainSignatureSend() {
       setIsError(true);
     }
   };
+
+  if (!evmAddress) {
+    return (
+      <div className="min-h-screen p-8 bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardBody className="p-8 text-center">
+            <Spinner size="lg" />
+            <p className="mt-4">Loading wallet information...</p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
 
   if (isSuccess) {
     return (
@@ -312,11 +381,14 @@ export default function ChainSignatureSend() {
                 />
               </div>
               
-              <div className="flex justify-between px-2 text-sm text-gray-600">
-                <span>Available:</span>
-                <span>
-                  {balances[selectedChain.prefix] || '0.0000'} ETH
-                </span>
+              {/* Chain Balance Display */}
+              <div className="flex justify-between items-center px-2 text-sm">
+                <span className="text-gray-600">Available Balance:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {balances[selectedChain.prefix] || '0.0000'} ETH
+                  </span>
+                </div>
               </div>
             </div>
 
