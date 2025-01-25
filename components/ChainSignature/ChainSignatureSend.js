@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { 
   Card, 
@@ -20,6 +20,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
 import { chains } from '../../data/supportedChain.json';
 import { useEvmSend } from '../../hooks/useEvmSend';
+import { useChainBalances } from '../../hooks/useChainBalances';
 
 const { connect, keyStores } = nearAPI;
 
@@ -48,7 +49,43 @@ export default function ChainSignatureSend() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedChain, setSelectedChain] = useState(chains[0]);
+  const { evmAddress: routerEvmAddress } = router.query;  // Get address from router
 
+  // Use the passed address or derive it if needed
+  const [evmAddress, setEvmAddress] = useState(() => {
+    // First try to get from router query
+    if (routerEvmAddress) {
+      return routerEvmAddress;
+    }
+    
+    // Fallback to localStorage if needed
+    try {
+      const walletInfo = localStorage.getItem('publicWalletInfo');
+      if (!walletInfo) {
+        console.log('No wallet info found in localStorage');
+        return null;
+      }
+      const parsed = JSON.parse(walletInfo);
+      
+      // If we have walletInfo, derive the address
+      if (parsed.accountId) {
+        // You might want to move this to a useEffect if it's async
+        return parsed.evmAddress || null;
+      }
+      return null;
+    } catch (err) {
+      console.error('Error getting EVM address:', err);
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (!evmAddress) {
+      router.push('/dashboard');
+    }
+  }, [evmAddress, router]);
+
+  // Add back the useEvmSend hook
   const { 
     sendTransaction, 
     isLoading: isSending, 
@@ -56,6 +93,12 @@ export default function ChainSignatureSend() {
     txHash: evmTxHash,
     getExplorerUrl 
   } = useEvmSend();
+
+  const { 
+    balances,
+    totalBalance,
+    refreshBalances 
+  } = useChainBalances(evmAddress);
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
@@ -104,6 +147,19 @@ export default function ChainSignatureSend() {
       setIsError(true);
     }
   };
+
+  if (!evmAddress) {
+    return (
+      <div className="min-h-screen p-8 bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardBody className="p-8 text-center">
+            <Spinner size="lg" />
+            <p className="mt-4">Loading wallet information...</p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
 
   if (isSuccess) {
     return (
@@ -258,48 +314,62 @@ export default function ChainSignatureSend() {
 
           <form onSubmit={onSubmit} className="space-y-6">
             {/* Amount Input with Chain Selector */}
-            <div className="relative">
-              <Input
-                isRequired
-                type="text"
-                size="lg"
-                label="Amount"
-                value={amount}
-                onChange={handleAmountChange}
-                className="text-3xl"
-                endContent={
-                  <Button
-                    className="min-w-fit h-full"
-                    onPress={onOpen}
-                    variant="flat"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        {/* Main Chain Logo */}
-                        <img 
-                          src={selectedChain.logo} 
-                          alt={selectedChain.name} 
-                          className="w-10 h-10"
-                        />
-                        {/* ETH Logo */}
-                        <img 
-                          src={ETH_TOKEN.icon} 
-                          alt={ETH_TOKEN.label} 
-                          className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
-                        />
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  isRequired
+                  type="text"
+                  size="lg"
+                  label="Amount"
+                  value={amount}
+                  onChange={handleAmountChange}
+                  className="text-3xl"
+                  endContent={
+                    <Button
+                      className="min-w-fit h-full"
+                      onPress={onOpen}
+                      variant="flat"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          {/* Main Chain Logo */}
+                          <img 
+                            src={selectedChain.logo} 
+                            alt={selectedChain.name} 
+                            className="w-10 h-10"
+                          />
+                          {/* ETH Logo - only show for non-Ethereum chains */}
+                          {selectedChain.prefix !== 'ethereum' && (
+                            <img 
+                              src={ETH_TOKEN.icon} 
+                              alt={ETH_TOKEN.label} 
+                              className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
+                            />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-left">
+                            {selectedChain.name}
+                          </p>
+                          <p className="text-sm text-default-500 text-left">
+                            ETH
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-left">
-                          {selectedChain.name}
-                        </p>
-                        <p className="text-sm text-default-500 text-left">
-                          ETH
-                        </p>
-                      </div>
-                    </div>
-                  </Button>
-                }
-              />
+                    </Button>
+                  }
+                />
+              </div>
+              
+              {/* Chain Balance Display */}
+              <div className="flex justify-between items-center px-2 text-sm">
+                <span className="text-gray-600">Available Balance:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {balances[selectedChain.prefix] || '0.0000'} ETH
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Recipient Address */}
@@ -367,11 +437,14 @@ export default function ChainSignatureSend() {
                           alt={chain.name} 
                           className="w-8 h-8"
                         />
-                        <img 
-                          src={ETH_TOKEN.icon}
-                          alt="ETH"
-                          className="w-5 h-5 rounded-full absolute -bottom-1 -right-1"
-                        />
+                        {/* Only show ETH icon for non-Ethereum chains */}
+                        {chain.prefix !== 'ethereum' && (
+                          <img 
+                            src={ETH_TOKEN.icon}
+                            alt="ETH"
+                            className="w-5 h-5 rounded-full absolute -bottom-1 -right-1"
+                          />
+                        )}
                       </div>
                       <div className="flex-grow">
                         <p className="font-medium">{chain.name}</p>
