@@ -80,24 +80,10 @@ export default function ChainSignatureSend() {
   });
 
   useEffect(() => {
-    // If we don't have an address, redirect back to dashboard
     if (!evmAddress) {
-      console.error('No EVM address available');
       router.push('/dashboard');
     }
   }, [evmAddress, router]);
-
-  // Log for debugging
-  useEffect(() => {
-    console.log('Router EVM Address:', routerEvmAddress);
-    console.log('Current EVM Address:', evmAddress);
-  }, [routerEvmAddress, evmAddress]);
-
-  // Log the initial state
-  useEffect(() => {
-    console.log('Current evmAddress:', evmAddress);
-    console.log('Raw localStorage data:', localStorage.getItem('publicWalletInfo'));
-  }, []);
 
   // Add back the useEvmSend hook
   const { 
@@ -113,12 +99,6 @@ export default function ChainSignatureSend() {
     totalBalance,
     refreshBalances 
   } = useChainBalances(evmAddress);
-
-  console.log('EVM Address from localStorage:', evmAddress);
-  console.log('All Balances:', balances);
-  console.log('Selected Chain:', selectedChain);
-  console.log('Selected Chain Balance:', balances[selectedChain.prefix]);
-  console.log('Total Balance:', totalBalance);
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
