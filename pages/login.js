@@ -278,7 +278,7 @@ export default function Login() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have a wallet?{' '}
+              Don&apos;t have a wallet?{' '}
               <span
                 onClick={() => router.push('/createWallet')}
                 style={{

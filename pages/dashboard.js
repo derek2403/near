@@ -96,7 +96,7 @@ export default function Dashboard() {
     };
 
     fetchWalletInfo();
-  }, []);
+  }, [router]);
 
   const fetchRecentTransactions = async (accountId) => {
     try {

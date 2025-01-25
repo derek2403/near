@@ -1,0 +1,41 @@
+{
+  "name": "wallet-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && node scripts/copy-extension-files.js && node scripts/post-build.js",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.0.18",
+    "@nextui-org/react": "^2.1.7",
+    "@nextui-org/theme": "2.1.18",
+    "ethers": "^6.13.5",
+    "framer-motion": "^10.16.4",
+    "near-api-js": "^2.1.4",
+    "near-ca": "^0.8.3",
+    "near-seed-phrase": "^0.2.0",
+    "next": "13.4.19",
+    "qrcode.react": "^3.2.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "lottie-react": "^2.4.0"
+  },
+  "devDependencies": {
+    "@svgr/webpack": "^8.1.0",
+    "@types/chrome": "^0.0.260",
+    "@types/node": "^20.17.14",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "8.51.0",
+    "eslint-config-next": "13.4.19",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.3.3"
+  }
+}
