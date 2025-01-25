@@ -25,6 +25,12 @@ async function buildExtension() {
       path.join(outDir, 'icons')
     );
 
+    // Copy fonts if they exist
+    const fontsDir = path.join(publicDir, 'fonts');
+    if (await fs.pathExists(fontsDir)) {
+      await fs.copy(fontsDir, path.join(outDir, 'fonts'));
+    }
+
     // Rename _next directory to assets
     if (await fs.pathExists(path.join(outDir, '_next'))) {
       await fs.move(
