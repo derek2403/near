@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [isLoadingTxns, setIsLoadingTxns] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchWalletInfo = async () => {
@@ -39,13 +40,14 @@ export default function Dashboard() {
         });
 
         const nearBalance = nearAPI.utils.format.formatNearAmount(accountState.amount);
-        const formattedBalance = Number(nearBalance).toFixed(6);
-        setBalance(formattedBalance);
+        setBalance(Number(nearBalance).toFixed(5));
 
         await fetchRecentTransactions(parsedInfo.accountId);
       } catch (err) {
         setError('Error loading wallet information');
         console.error('Wallet loading error:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -79,14 +81,20 @@ export default function Dashboard() {
     }
   };
 
-  if (!walletInfo) {
-    return <div className="extension-container bg-gray-50 flex items-center justify-center">
-      <Card>
-        <CardBody>
-          {error || 'Loading...'}
-        </CardBody>
-      </Card>
-    </div>;
+  if (loading) {
+    return (
+      <div className="extension-container bg-gray-50 flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="extension-container bg-gray-50 flex items-center justify-center">
+        <p className="text-danger">{error}</p>
+      </div>
+    );
   }
 
   return (
@@ -100,32 +108,34 @@ export default function Dashboard() {
             variant="light"
             onPress={() => router.push('/settings')}
           >
-            <Cog8ToothIcon className="h-4 w-4" />
+            <Cog8ToothIcon className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Balance Card */}
         <Card>
           <CardBody className="p-4">
-            <div className="text-center">
+            <div className="space-y-1">
               <p className="text-sm text-gray-600">Total Balance</p>
               <p className="text-2xl font-bold">{balance} NEAR</p>
+              <p className="text-sm text-gray-600">{walletInfo?.accountId}</p>
             </div>
-            
-            <div className="flex justify-center gap-2 mt-4">
+
+            <div className="flex gap-2 mt-4">
               <Button
-                color="primary"
                 startContent={<ArrowUpIcon className="h-4 w-4" />}
+                color="primary"
+                className="flex-1"
                 onPress={() => router.push('/send')}
-                size="sm"
               >
                 Send
               </Button>
               <Button
+                startContent={<ArrowDownIcon className="h-4 w-4" />}
                 color="primary"
                 variant="bordered"
-                startContent={<ArrowDownIcon className="h-4 w-4" />}
-                size="sm"
+                className="flex-1"
+                onPress={() => router.push('/receive')}
               >
                 Receive
               </Button>
