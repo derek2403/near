@@ -4,23 +4,26 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/build-extension.js",
+    "build": "rm -rf .next build out && next build && node scripts/build-extension.js",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
-    "@nextui-org/react": "^2.0.0",
+    "@nextui-org/react": "^2.6.11",
+    "framer-motion": "^10.18.0",
     "near-api-js": "^1.1.0",
     "near-seed-phrase": "^0.2.0",
     "next": "13.5.6",
     "react": "^18",
-    "react-dom": "^18",
-    "tailwindcss": "^3.0.0"
+    "react-dom": "^18"
   },
   "devDependencies": {
-    "postcss": "^8",
+    "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.2.23"
+    "eslint-config-next": "14.2.23",
+    "fs-extra": "^11.1.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0"
   }
 }

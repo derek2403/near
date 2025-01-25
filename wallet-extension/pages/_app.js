@@ -1,11 +1,15 @@
 import "@/styles/globals.css";
 import { NextUIProvider } from "@nextui-org/react";
-import { useSSR } from '@nextui-org/react'
+import { useEffect, useState } from 'react';
 
 export default function App({ Component, pageProps }) {
-  const { isBrowser } = useSSR()
+  const [mounted, setMounted] = useState(false);
 
-  if (!isBrowser) {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
     return null;
   }
 
