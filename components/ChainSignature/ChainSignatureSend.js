@@ -20,6 +20,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
 import { chains } from '../../data/supportedChain.json';
 import { useEvmSend } from '../../hooks/useEvmSend';
+import { useChainBalances } from '../../hooks/useChainBalances';
 
 const { connect, keyStores } = nearAPI;
 
@@ -56,6 +57,12 @@ export default function ChainSignatureSend() {
     txHash: evmTxHash,
     getExplorerUrl 
   } = useEvmSend();
+
+  const { balances } = useChainBalances(
+    localStorage.getItem('publicWalletInfo') 
+      ? JSON.parse(localStorage.getItem('publicWalletInfo')).evmAddress 
+      : null
+  );
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
@@ -258,50 +265,59 @@ export default function ChainSignatureSend() {
 
           <form onSubmit={onSubmit} className="space-y-6">
             {/* Amount Input with Chain Selector */}
-            <div className="relative">
-              <Input
-                isRequired
-                type="text"
-                size="lg"
-                label="Amount"
-                value={amount}
-                onChange={handleAmountChange}
-                className="text-3xl"
-                endContent={
-                  <Button
-                    className="min-w-fit h-full"
-                    onPress={onOpen}
-                    variant="flat"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        {/* Main Chain Logo */}
-                        <img 
-                          src={selectedChain.logo} 
-                          alt={selectedChain.name} 
-                          className="w-10 h-10"
-                        />
-                        {/* ETH Logo - only show for non-Ethereum chains */}
-                        {selectedChain.prefix !== 'ethereum' && (
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  isRequired
+                  type="text"
+                  size="lg"
+                  label="Amount"
+                  value={amount}
+                  onChange={handleAmountChange}
+                  className="text-3xl"
+                  endContent={
+                    <Button
+                      className="min-w-fit h-full"
+                      onPress={onOpen}
+                      variant="flat"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          {/* Main Chain Logo */}
                           <img 
-                            src={ETH_TOKEN.icon} 
-                            alt={ETH_TOKEN.label} 
-                            className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
+                            src={selectedChain.logo} 
+                            alt={selectedChain.name} 
+                            className="w-10 h-10"
                           />
-                        )}
+                          {/* ETH Logo - only show for non-Ethereum chains */}
+                          {selectedChain.prefix !== 'ethereum' && (
+                            <img 
+                              src={ETH_TOKEN.icon} 
+                              alt={ETH_TOKEN.label} 
+                              className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
+                            />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-left">
+                            {selectedChain.name}
+                          </p>
+                          <p className="text-sm text-default-500 text-left">
+                            ETH
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-left">
-                          {selectedChain.name}
-                        </p>
-                        <p className="text-sm text-default-500 text-left">
-                          ETH
-                        </p>
-                      </div>
-                    </div>
-                  </Button>
-                }
-              />
+                    </Button>
+                  }
+                />
+              </div>
+              
+              <div className="flex justify-between px-2 text-sm text-gray-600">
+                <span>Available:</span>
+                <span>
+                  {balances[selectedChain.prefix] || '0.0000'} ETH
+                </span>
+              </div>
             </div>
 
             {/* Recipient Address */}
