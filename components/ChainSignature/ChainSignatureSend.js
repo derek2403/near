@@ -281,12 +281,14 @@ export default function ChainSignatureSend() {
                           alt={selectedChain.name} 
                           className="w-10 h-10"
                         />
-                        {/* ETH Logo */}
-                        <img 
-                          src={ETH_TOKEN.icon} 
-                          alt={ETH_TOKEN.label} 
-                          className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
-                        />
+                        {/* ETH Logo - only show for non-Ethereum chains */}
+                        {selectedChain.prefix !== 'ethereum' && (
+                          <img 
+                            src={ETH_TOKEN.icon} 
+                            alt={ETH_TOKEN.label} 
+                            className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
+                          />
+                        )}
                       </div>
                       <div>
                         <p className="font-medium text-left">
@@ -367,11 +369,14 @@ export default function ChainSignatureSend() {
                           alt={chain.name} 
                           className="w-8 h-8"
                         />
-                        <img 
-                          src={ETH_TOKEN.icon}
-                          alt="ETH"
-                          className="w-5 h-5 rounded-full absolute -bottom-1 -right-1"
-                        />
+                        {/* Only show ETH icon for non-Ethereum chains */}
+                        {chain.prefix !== 'ethereum' && (
+                          <img 
+                            src={ETH_TOKEN.icon}
+                            alt="ETH"
+                            className="w-5 h-5 rounded-full absolute -bottom-1 -right-1"
+                          />
+                        )}
                       </div>
                       <div className="flex-grow">
                         <p className="font-medium">{chain.name}</p>
