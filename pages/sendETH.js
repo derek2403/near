@@ -2,7 +2,7 @@ import { useState } from 'react';
 import dotenv from "dotenv";
 import {
   setupAdapter,
-} from "../near-ca/src";
+} from "../near-ca";
 
 dotenv.config();
 
