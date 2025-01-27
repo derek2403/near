@@ -1,40 +1,105 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Nearer Wallet
 
-## Getting Started
+## Overview
+Nearer is an advanced wallet solution for the NEAR ecosystem, designed to combine security, ease of use, and interoperability. Building on prior work from ETHGlobal Singapore, it incorporates AI and blockchain innovations to deliver a next-generation wallet experience.
 
-First, run the development server:
+## 🎯 Goals
+- Offer seamless user experience
+- Integrate intent-based transactions
+- Provide chain abstraction
+- Enhance security mechanisms
+- Revolutionize Web3 application interactions
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🌟 Key Differentiators
+Nearer serves as both a native NEAR wallet and a web extension, similar to MetaMask, but with significant advancements:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- ✨ No manual chain-switching for multi-chain interactions
+- 🔒 Automatic wallet generation for non-whitelisted websites
+- 🤖 AI integration for DeFi actions (inspired by Thirdweb's Nebula)
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+## 🌍 Ecosystem Impact
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+### Improving Accessibility
+- Users can interact with dApps across chains without technical knowledge
+- Simplified network settings and configuration
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+### Enhancing Security
+- Automatic wallet generation per website connection
+- Minimized risks from malicious dApps
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+### Encouraging Innovation
+- AI-powered automated DeFi strategies
+- Advanced financial tools accessible to all
 
-## Learn More
+### Driving Adoption
+- Simplified onboarding process
+- Intuitive design for new users
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠 Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 1. Basic Wallet Functionalities
+- Create wallets with secure seed phrases and private keys
+- Login with existing credentials
+- Send and receive funds on NEAR
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+### 2. Intent-Based Transactions
+- Interact with selected EVM chains without manual switching
+- Enable chain abstraction through aggregated signatures
 
-## Deploy on Vercel
+### 3. Enhanced Security
+- Generate unique wallet address per website connection
+- Protect funds through isolated wallet interactions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 4. AI Integration for DeFi
+- AI agents for complex DeFi actions
+- Automated tasks (swapping, staking, liquidity provisioning)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+### 5. Web Extension
+- Lightweight and secure wallet experience
+- Seamless website and dApp integration
+
+## 💡 Use Cases
+
+### Secure dApp Interactions
+- Safe connection to any dApp without risking primary wallet
+
+### Multi-Chain Interactions
+- Direct fund reception from EVM-compatible chains
+
+### Automated DeFi Management
+- Minimal-effort portfolio management
+
+### Developer Integration
+- APIs and SDKs for seamless dApp integration
+
+### User Onboarding
+- Simplified interaction with NEAR and EVM chains
+
+## 🗺 Roadmap
+
+### Phase 1: January/February 2025
+- Web Extension Conversion
+- Secure wallet integration
+- AI integration
+
+### Phase 2: March/April 2025 
+- Chain signature
+- Enhanced security
+  
+### Phase 3: May/June 2025 (Beta release)
+- AI integration for DeFi
+- Multi-chain support
+- Developer APIs
+
+### Phase 4: July/August 2025
+- Full launch
+- Community feedback integration
+- Continuous improvement
+
+## 🔗 Links
+- [Previous Repository](https://github.com/derek2403/NEARer)
+- [Deployed Wallet](https://near-alpha.vercel.app/)
+
+---
+
+Nearer represents a significant step forward for secure, user-friendly, and intelligent wallet solutions in the Web3 space. Our goal is to empower users and developers alike while fostering innovation within the NEAR ecosystem.

@@ -1,0 +1,39 @@
+{
+  "coins": [
+    {
+      "key": "near",
+      "label": "NEAR",
+      "symbol": "NEAR",
+      "icon": "/icons/near.svg",
+      "description": "Native NEAR Token"
+    },
+    {
+      "key": "eth",
+      "label": "Ethereum",
+      "symbol": "ETH",
+      "icon": "/icons/ethereum.svg",
+      "description": "Native Ethereum Token"
+    },
+    {
+      "key": "matic",
+      "label": "Polygon",
+      "symbol": "MATIC",
+      "icon": "/icons/polygon.svg",
+      "description": "Native Polygon Token"
+    },
+    {
+      "key": "bnb",
+      "label": "BNB",
+      "symbol": "BNB",
+      "icon": "/icons/bnb.svg",
+      "description": "Native BNB Chain Token"
+    },
+    {
+      "key": "arb",
+      "label": "Arbitrum",
+      "symbol": "ETH",
+      "icon": "/icons/arbitrum.svg",
+      "description": "Native Arbitrum Token"
+    }
+  ]
+} 
