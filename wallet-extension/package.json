@@ -20,6 +20,8 @@
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@lottiefiles/dotlottie-react": "^0.12.3",
+    "@svgr/webpack": "^8.1.0",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.2.23",
