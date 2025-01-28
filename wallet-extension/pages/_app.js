@@ -1,24 +1,44 @@
+import { useState, useEffect } from 'react';
 import "@/styles/globals.css";
 import { NextUIProvider } from "@nextui-org/react";
-import { useEffect, useState } from 'react';
 
 export default function App({ Component, pageProps }) {
-  const [mounted, setMounted] = useState(false);
+  const [currentPage, setCurrentPage] = useState('index');
+  const [pageProps, setPageProps] = useState({});
+
+  // Custom router for extension
+  const router = {
+    push: (path) => {
+      const page = path.replace('/', '') || 'index';
+      setCurrentPage(page);
+    },
+    query: pageProps
+  };
 
   useEffect(() => {
-    setMounted(true);
+    // Check if user is logged in
+    chrome.storage.local.get('publicWalletInfo', (result) => {
+      if (result.publicWalletInfo) {
+        setCurrentPage('dashboard');
+      }
+    });
   }, []);
 
-  if (!mounted) {
-    return null;
-  }
+  // Map pages to components
+  const pages = {
+    index: require('./index').default,
+    createWallet: require('./createWallet').default,
+    dashboard: require('./dashboard').default,
+    login: require('./login').default,
+    send: require('./send').default,
+    settings: require('./settings').default
+  };
+
+  const PageComponent = pages[currentPage] || pages.index;
 
   return (
-    // Adding a max width and height for extension popup
-    <div className="w-[400px] h-[600px] overflow-auto">
-      <NextUIProvider>
-        <Component {...pageProps} />
-      </NextUIProvider>
-    </div>
+    <NextUIProvider>
+      <PageComponent {...pageProps} router={router} />
+    </NextUIProvider>
   );
 }

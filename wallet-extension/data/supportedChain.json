@@ -1,0 +1,40 @@
+{
+  "chains": [
+    {
+      "name": "Ethereum",
+      "prefix": "ethereum",
+      "chainId": 11155111,
+      "rpcUrl": "https://eth-sepolia.g.alchemy.com/v2/2iPF_MT9jp-O4mQ0eWd1HpeamV3zWWt4",
+      "symbol": "ETH",
+      "logo": "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+      "explorerUrl": "https://sepolia.etherscan.io/address/"
+    },
+    {
+      "name": "Base",
+      "prefix": "base",
+      "chainId": 84532,
+      "rpcUrl": "https://sepolia.base.org",
+      "symbol": "ETH",
+      "logo": "https://altcoinsbox.com/wp-content/uploads/2023/02/base-logo-in-blue.png",
+      "explorerUrl": "https://sepolia-explorer.base.org/"
+    },
+    {
+      "name": "Optimism",
+      "prefix": "optimism",
+      "chainId": 11155420,
+      "rpcUrl": "https://sepolia.optimism.io",
+      "symbol": "ETH",
+      "logo": "https://cryptologos.cc/logos/optimism-ethereum-op-logo.png",
+      "explorerUrl": "https://sepolia-optimism.etherscan.io/address/"
+    },
+    {
+      "name": "Arbitrum",
+      "prefix": "arbitrum",
+      "chainId": 421614,
+      "rpcUrl": "https://sepolia-rollup.arbitrum.io/rpc",
+      "symbol": "ETH",
+      "logo": "https://cryptologos.cc/logos/arbitrum-arb-logo.png",
+      "explorerUrl": "https://sepolia.arbiscan.io/address/"
+    }
+  ]
+}
