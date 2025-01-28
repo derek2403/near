@@ -1,13 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NEAR Wallet</title>
-  <link href="styles/globals.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 360px;
+      height: 600px;
+      background-color: white;
+      color: black;
+    }
+    #root {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>
-  <script src="popup.js"></script>
+  <script src="popup.js" type="module"></script>
 </body>
 </html>

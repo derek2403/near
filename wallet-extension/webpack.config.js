@@ -4,12 +4,36 @@ const webpack = require('webpack');
 
 module.exports = {
   mode: 'development',
+  devtool: 'cheap-module-source-map',
   entry: {
     popup: './popup.js'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].js',
+    clean: true
+  },
+  module: {
+    rules: [
+      {
+        test: /\.(js|jsx)$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-react', '@babel/preset-env']
+          }
+        }
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
+      },
+      {
+        test: /\.(png|jpg|jpeg|gif)$/i,
+        type: 'asset/resource'
+      }
+    ]
   },
   resolve: {
     extensions: ['.js', '.jsx'],
@@ -31,32 +55,11 @@ module.exports = {
       "vm": require.resolve("vm-browserify")
     }
   },
-  module: {
-    rules: [
-      {
-        test: /\.(js|jsx)$/,
-        exclude: /node_modules/,
-        use: {
-          loader: 'babel-loader',
-          options: {
-            presets: ['@babel/preset-react']
-          }
-        }
-      },
-      {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader', 'postcss-loader']
-      },
-      {
-        test: /\.(png|jpg|jpeg|gif)$/i,
-        type: 'asset/resource'
-      }
-    ]
-  },
   plugins: [
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
-      process: require.resolve('process/browser')
+      process: require.resolve('process/browser'),
+      React: 'react'
     }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
@@ -64,9 +67,9 @@ module.exports = {
     }),
     new CopyPlugin({
       patterns: [
-        { from: "manifest.json", to: "manifest.json" },
         { from: "popup.html", to: "popup.html" },
-        { from: "public", to: "public" },
+        { from: "manifest.json", to: "manifest.json" },
+        { from: "public/icons", to: "icons" },
         { from: "styles", to: "styles" }
       ],
     }),
