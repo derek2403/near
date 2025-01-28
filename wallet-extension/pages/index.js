@@ -1,21 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import { Input, Button, Card, CardBody } from "@nextui-org/react";
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
-export default function Home() {
-  const router = useRouter();
+export default function Home({ router }) {
   const [walletInfo, setWalletInfo] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
-    const publicInfo = localStorage.getItem('publicWalletInfo');
-    if (publicInfo) {
-      setWalletInfo(JSON.parse(publicInfo));
-    }
+    chrome.storage.local.get('publicWalletInfo', (result) => {
+      if (result.publicWalletInfo) {
+        setWalletInfo(JSON.parse(result.publicWalletInfo));
+      }
+    });
   }, []);
 
   const handleLogin = async (e) => {
@@ -23,18 +20,19 @@ export default function Home() {
     setLoginError('');
 
     try {
-      const storedHash = localStorage.getItem('passwordHash');
-      const inputHash = await hashPassword(password);
+      chrome.storage.local.get(['passwordHash', 'encryptedWallet'], async (result) => {
+        const storedHash = result.passwordHash;
+        const inputHash = await hashPassword(password);
 
-      if (inputHash === storedHash) {
-        const encryptedWallet = localStorage.getItem('encryptedWallet');
-        const decryptedWallet = await decryptWalletData(encryptedWallet, password);
-        setWalletInfo(decryptedWallet);
-        setIsLoggedIn(true);
-        router.push('/dashboard');
-      } else {
-        setLoginError('Incorrect password');
-      }
+        if (inputHash === storedHash) {
+          const decryptedWallet = await decryptWalletData(result.encryptedWallet, password);
+          setWalletInfo(decryptedWallet);
+          setIsLoggedIn(true);
+          router.push('dashboard');
+        } else {
+          setLoginError('Incorrect password');
+        }
+      });
     } catch (error) {
       setLoginError('Error accessing wallet');
       console.error(error);
@@ -43,30 +41,33 @@ export default function Home() {
 
   if (!walletInfo) {
     return (
-      <div className="extension-container bg-gray-50">
-        <Card className="mx-auto">
-          <CardBody className="p-4">
-            <h1 className="text-xl font-bold mb-3">Welcome to NEAR Wallet</h1>
-            <p className="text-sm text-gray-600 mb-4">
-              Create or import your NEAR wallet to get started.
-            </p>
+      <div className="min-h-screen p-8 bg-gray-50">
+        <Card className="max-w-md mx-auto">
+          <CardBody className="p-8">
+            <h1 className="text-2xl font-bold mb-4">Welcome to NEAR Wallet</h1>
+            <p className="text-gray-600 mb-6">To get started, create your first NEAR wallet.</p>
             
-            <div className="space-y-3">
-              <Button
-                color="primary"
-                className="w-full"
-                onPress={() => router.push('/createWallet')}
-              >
-                Create New Wallet
-              </Button>
+            <Button
+              onPress={() => router.push('createWallet')}
+              color="primary"
+              className="w-full"
+              size="lg"
+            >
+              Create New Wallet
+            </Button>
 
-              <Button
-                variant="bordered"
-                className="w-full"
-                onPress={() => router.push('/login')}
-              >
-                Import Existing Wallet
-              </Button>
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Already have a wallet?{' '}
+                <Button
+                  onPress={() => router.push('login')}
+                  variant="light"
+                  color="primary"
+                  className="p-0"
+                >
+                  Login here
+                </Button>
+              </p>
             </div>
           </CardBody>
         </Card>
@@ -75,55 +76,70 @@ export default function Home() {
   }
 
   return (
-    <div className="extension-container bg-gray-50">
-      <Card className="mx-auto">
-        <CardBody className="p-4">
-          <h1 className="text-xl font-bold mb-3">Welcome Back</h1>
-          <p className="text-sm text-gray-600 mb-4">
-            Enter your password to unlock your wallet.
-          </p>
+    <div className="min-h-screen p-8 bg-gray-50">
+      <Card className="max-w-md mx-auto">
+        <CardBody className="p-8">
+          <h1 className="text-2xl font-bold mb-4">Welcome Back</h1>
+          <p className="text-gray-600 mb-6">Enter your password to access your wallet.</p>
           
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-6">
             <Input
-              type={showPassword ? "text" : "password"}
               label="Password"
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              endContent={
-                <button type="button" onClick={() => setShowPassword(!showPassword)}>
-                  {showPassword ? (
-                    <EyeSlashIcon className="h-4 w-4" />
-                  ) : (
-                    <EyeIcon className="h-4 w-4" />
-                  )}
-                </button>
-              }
+              variant="bordered"
+              className="max-w-full"
+              required
             />
 
             {loginError && (
-              <p className="text-danger text-sm">{loginError}</p>
+              <Card className="bg-danger-50 border-none">
+                <CardBody className="text-danger py-2">
+                  {loginError}
+                </CardBody>
+              </Card>
             )}
 
             <Button
               type="submit"
               color="primary"
               className="w-full"
-              isDisabled={!password}
+              size="lg"
             >
               Unlock
             </Button>
           </form>
 
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
-              Want to use a different wallet?{' '}
-              <span
-                onClick={() => router.push('/login')}
-                className="text-primary cursor-pointer hover:underline"
-              >
-                Import here
-              </span>
-            </p>
+          <div className="mt-6 space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">or</span>
+              </div>
+            </div>
+
+            <Button
+              onPress={() => router.push('login')}
+              variant="bordered"
+              color="primary"
+              className="w-full"
+              size="lg"
+            >
+              Login to Different Wallet
+            </Button>
+
+            <Button
+              onPress={() => router.push('createWallet')}
+              variant="light"
+              color="primary"
+              className="w-full"
+              size="lg"
+            >
+              Create New Wallet
+            </Button>
           </div>
         </CardBody>
       </Card>
@@ -131,13 +147,11 @@ export default function Home() {
   );
 }
 
-// Utility functions
+// Utility functions for decryption
 const decryptWalletData = async (encryptedData, password) => {
-  // This is a placeholder - use proper decryption in production
   return JSON.parse(atob(encryptedData)).data;
 };
 
 const hashPassword = async (password) => {
-  // This is a placeholder - use proper hashing in production
   return btoa(password);
 };

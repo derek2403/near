@@ -1,209 +1,389 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as nearAPI from "near-api-js";
 import { generateSeedPhrase } from "near-seed-phrase";
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { useRouter } from 'next/router';
-import { Input, Button, Card, CardBody } from "@nextui-org/react";
+import { EyeIcon, EyeSlashIcon, ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
 import CreatePassword from '../components/CreatePassword';
 import { useDisclosure } from '@nextui-org/react';
+import { Input, Button, Card, CardBody, Spinner } from "@nextui-org/react";
 
 const { connect, keyStores, KeyPair } = nearAPI;
 
-export default function CreateWallet() {
-  const router = useRouter();
-  const [step, setStep] = useState(1); // 1: Create, 2: Show Keys, 3: Set Password
+export default function CreateWallet({ router }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [walletInfo, setWalletInfo] = useState(null);
-  const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [accountId, setAccountId] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState(null);
-  const {isOpen, onOpen, onClose} = useDisclosure();
+  const [showSeedPhrase, setShowSeedPhrase] = useState(false);
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [copiedStates, setCopiedStates] = useState({
+    seedPhrase: false,
+    privateKey: false,
+    publicKey: false,
+    accountId: false
+  });
   const [passwordError, setPasswordError] = useState('');
 
-  const handleCreateWallet = async () => {
-    if (!accountId.trim()) {
-      setError('Please enter an account ID');
+  const {isOpen, onOpen, onClose} = useDisclosure();
+
+  useEffect(() => {
+    if (!accountId) {
+      setIsAvailable(null);
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    const checkAccountAvailability = async () => {
+      try {
+        setIsChecking(true);
+        setError(null);
 
+        const fullAccountId = `${accountId}.testnet`;
+        console.log(`Checking availability for account: ${fullAccountId}`);
+
+        const response = await fetch('https://rpc.testnet.near.org', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 'dontcare',
+            method: 'query',
+            params: {
+              request_type: 'view_account',
+              finality: 'final',
+              account_id: fullAccountId
+            }
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.error && data.error.cause && data.error.cause.name === 'UNKNOWN_ACCOUNT') {
+          setIsAvailable(true);
+        } else {
+          setIsAvailable(false);
+        }
+
+      } catch (err) {
+        console.error('Error checking account availability:', err);
+        setError(err.message);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      checkAccountAvailability();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [accountId]);
+
+  const generateWallet = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
       const { seedPhrase, secretKey, publicKey } = generateSeedPhrase();
-      
-      setWalletInfo({
-        accountId: accountId + '.testnet',
+      const fullAccountId = `${accountId}.testnet`;
+
+      const connectionConfig = {
+        networkId: "testnet",
+        keyStore: new keyStores.InMemoryKeyStore(),
+        nodeUrl: "https://rpc.testnet.near.org",
+        walletUrl: "https://testnet.mynearwallet.com/",
+        helperUrl: "https://helper.testnet.near.org",
+        explorerUrl: "https://testnet.nearblocks.io"
+      };
+
+      const near = await connect(connectionConfig);
+
+      const keyPair = KeyPair.fromString(secretKey);
+      const keyStore = new keyStores.InMemoryKeyStore();
+      await keyStore.setKey("testnet", fullAccountId, keyPair);
+
+      const account = await near.createAccount(fullAccountId, publicKey);
+
+      const newWalletInfo = {
+        accountId: fullAccountId,
+        seedPhrase,
         publicKey,
-        privateKey: secretKey,
-        seedPhrase
-      });
-      
-      setStep(2); // Move to show keys step
+        secretKey
+      };
+
+      setWalletInfo(newWalletInfo);
+
     } catch (err) {
-      setError('Error creating wallet');
-      console.error('Wallet creation error:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCheckAvailability = async (value) => {
-    setAccountId(value);
-    if (!value) {
-      setIsAvailable(null);
-      return;
-    }
-
-    setIsChecking(true);
+  const handleCopy = async (text, field) => {
     try {
-      const provider = new nearAPI.providers.JsonRpcProvider({
-        url: "https://rpc.testnet.near.org"
-      });
-
-      await provider.query({
-        request_type: 'view_account',
-        finality: 'final',
-        account_id: value + '.testnet'
-      });
-      
-      setIsAvailable(false); // Account exists
+      await navigator.clipboard.writeText(text);
+      setCopiedStates(prev => ({ ...prev, [field]: true }));
+      setTimeout(() => {
+        setCopiedStates(prev => ({ ...prev, [field]: false }));
+      }, 2000);
     } catch (err) {
-      if (err.toString().includes('does not exist')) {
-        setIsAvailable(true); // Account is available
-      } else {
-        setIsAvailable(false);
-      }
-    } finally {
-      setIsChecking(false);
+      console.error('Failed to copy:', err);
     }
   };
 
   const handleSetPassword = async (password) => {
     try {
-      // Encrypt wallet info
       const encryptedWallet = await encryptWalletData(walletInfo, password);
       const passwordHash = await hashPassword(password);
-
-      // Store in localStorage
-      localStorage.setItem('encryptedWallet', encryptedWallet);
-      localStorage.setItem('passwordHash', passwordHash);
-      localStorage.setItem('publicWalletInfo', JSON.stringify({
-        accountId: walletInfo.accountId,
-        publicKey: walletInfo.publicKey
-      }));
-
-      onClose();
-      router.push('/dashboard');
-    } catch (err) {
-      setPasswordError('Error saving wallet');
-      console.error('Error saving wallet:', err);
-    }
-  };
-
-  const renderStep = () => {
-    switch (step) {
-      case 1:
-        return (
-          <div className="space-y-4">
-            <h1 className="text-xl font-bold">Create New Account</h1>
-            <div className="space-y-2">
-              <Input
-                label="Account ID"
-                placeholder="yourname"
-                value={accountId}
-                onChange={(e) => handleCheckAvailability(e.target.value)}
-                endContent={
-                  <div className="flex items-center">
-                    <span>.testnet</span>
-                  </div>
-                }
-              />
-              {isChecking && <p className="text-sm text-gray-600">Checking availability...</p>}
-              {isAvailable === true && <p className="text-sm text-success">Account is available!</p>}
-              {isAvailable === false && <p className="text-sm text-danger">Account is not available</p>}
-            </div>
-            
-            <Button
-              color="primary"
-              className="w-full"
-              onPress={handleCreateWallet}
-              isLoading={loading}
-              isDisabled={!isAvailable || !accountId}
-            >
-              Create Account
-            </Button>
-
-            {error && <p className="text-danger text-sm">{error}</p>}
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-4">
-            <h1 className="text-xl font-bold">Save Your Private Key</h1>
-            <p className="text-sm text-gray-600">
-              Please save this private key securely. You'll need it to recover your account.
-            </p>
-
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className={`text-sm break-all ${!showPrivateKey ? 'blur-sm' : ''}`}>
-                  {walletInfo?.privateKey}
-                </span>
-                <button onClick={() => setShowPrivateKey(!showPrivateKey)}>
-                  {showPrivateKey ? (
-                    <EyeSlashIcon className="h-4 w-4" />
-                  ) : (
-                    <EyeIcon className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-red-50 p-3 rounded-lg">
-              <p className="text-red-600 text-sm">
-                ⚠️ Never share your private key with anyone!
-              </p>
-            </div>
-
-            <Button
-              color="primary"
-              className="w-full"
-              onPress={() => {
-                onOpen();
-                setStep(3);
-              }}
-            >
-              I've saved my private key
-            </Button>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-4">
-            <h1 className="text-xl font-bold">Set Password</h1>
-            <p className="text-sm text-gray-600">
-              Create a password to secure your wallet.
-            </p>
-          </div>
-        );
+      
+      chrome.storage.local.set({
+        encryptedWallet: encryptedWallet,
+        passwordHash: passwordHash,
+        publicWalletInfo: JSON.stringify({
+          accountId: walletInfo.accountId,
+          publicKey: walletInfo.publicKey
+        })
+      }, () => {
+        onClose();
+        router.push('dashboard');
+      });
+    } catch (error) {
+      setPasswordError('Error securing wallet');
+      console.error(error);
     }
   };
 
   return (
-    <div className="extension-container bg-gray-50">
-      <Card className="mx-auto">
-        <CardBody className="p-4">
-          {renderStep()}
+    <div className="min-h-screen p-8 bg-gray-50">
+      <Card className="max-w-md mx-auto md:max-w-2xl">
+        <CardBody className="p-8">
+          <h1 className="text-2xl font-bold mb-4">Create New Account</h1>
+          <p className="text-gray-600 mb-8">
+            Enter an Account ID to use with your NEAR account. Your Account ID will be used for all NEAR operations, including sending and receiving assets.
+          </p>
+
+          {error && (
+            <div className="mb-6">
+              <Card className="bg-danger-50 border-none">
+                <CardBody className="text-danger">
+                  {error}
+                </CardBody>
+              </Card>
+            </div>
+          )}
+
+          {!walletInfo && (
+            <div>
+              <div className="mb-6">
+                <Input
+                  label="Enter your Wallet Name"
+                  value={accountId}
+                  onChange={(e) => {
+                    setAccountId(e.target.value.toLowerCase());
+                    setIsAvailable(null);
+                  }}
+                  variant="bordered"
+                  endContent={<span className="text-gray-500">.testnet</span>}
+                  className="max-w-full"
+                />
+              </div>
+
+              {isChecking && (
+                <div className="text-gray-600 mb-4 flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Checking availability...</span>
+                </div>
+              )}
+
+              {isAvailable !== null && (
+                <div className="mb-6">
+                  <Card className={isAvailable ? "bg-success-50" : "bg-danger-50"}>
+                    <CardBody className={isAvailable ? "text-success" : "text-danger"}>
+                      {isAvailable
+                        ? `Congrats! ${accountId}.testnet is available.`
+                        : 'Account ID is taken. Try something else.'}
+                    </CardBody>
+                  </Card>
+                </div>
+              )}
+
+              <Button
+                onPress={generateWallet}
+                isDisabled={loading || !isAvailable || !accountId}
+                color="primary"
+                className="w-full"
+                size="lg"
+                isLoading={loading}
+                spinner={<Spinner color="white" size="sm" />}
+              >
+                Generate New Wallet
+              </Button>
+            </div>
+          )}
+
+          {walletInfo && (
+            <div className="space-y-6">
+              <Card className="bg-success-50 border-none">
+                <CardBody className="text-success">
+                  Wallet Generated Successfully!
+                </CardBody>
+              </Card>
+              
+              <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+                <h2 className="font-semibold text-yellow-800 mb-4">
+                  Important: Save This Information
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Account ID:</label>
+                    <div className="flex items-center bg-white p-3 rounded-lg border">
+                      <p className="text-sm flex-1">{walletInfo.accountId}</p>
+                      <button
+                        onClick={() => handleCopy(walletInfo.accountId, 'accountId')}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {copiedStates.accountId ? (
+                          <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Seed Phrase:</label>
+                    <div className="flex items-center bg-white p-3 rounded-lg border">
+                      <p className={`text-sm flex-1 break-all ${!showSeedPhrase ? 'blur-sm' : ''}`}>
+                        {walletInfo.seedPhrase}
+                      </p>
+                      <button
+                        onClick={() => handleCopy(walletInfo.seedPhrase, 'seedPhrase')}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {copiedStates.seedPhrase ? (
+                          <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setShowSeedPhrase(!showSeedPhrase)}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showSeedPhrase ? (
+                          <EyeSlashIcon className="h-5 w-5" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Private Key:</label>
+                    <div className="flex items-center bg-white p-3 rounded-lg border">
+                      <p className={`text-sm flex-1 break-all ${!showPrivateKey ? 'blur-sm' : ''}`}>
+                        {walletInfo.secretKey}
+                      </p>
+                      <button
+                        onClick={() => handleCopy(walletInfo.secretKey, 'privateKey')}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {copiedStates.privateKey ? (
+                          <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setShowPrivateKey(!showPrivateKey)}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPrivateKey ? (
+                          <EyeSlashIcon className="h-5 w-5" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Public Key:</label>
+                    <div className="flex items-center bg-white p-3 rounded-lg border">
+                      <p className="text-sm flex-1 break-all">{walletInfo.publicKey}</p>
+                      <button
+                        onClick={() => handleCopy(walletInfo.publicKey, 'publicKey')}
+                        className="ml-2 text-gray-500 hover:text-gray-700"
+                      >
+                        {copiedStates.publicKey ? (
+                          <ClipboardDocumentCheckIcon className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-sm font-medium">
+                      ⚠️ Warning: Store this information securely. Never share your private key or seed phrase with anyone!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col space-y-4">
+                <button
+                  onClick={onOpen}
+                  className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-all duration-200 transform hover:-translate-y-0.5"
+                >
+                  Go to Dashboard
+                </button>
+
+                <button
+                  onClick={() => {
+                    setWalletInfo(null);
+                    setError(null);
+                    setShowSeedPhrase(false);
+                    setShowPrivateKey(false);
+                    setCopiedStates({
+                      seedPhrase: false,
+                      privateKey: false,
+                      publicKey: false,
+                      accountId: false
+                    });
+                  }}
+                  className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-all duration-200 transform hover:-translate-y-0.5"
+                >
+                  Generate Another Wallet
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Already have a wallet?{' '}
+              <span
+                onClick={() => router.push('login')}
+                style={{
+                  color: "#0070f3",
+                  cursor: "pointer"
+                }}
+              >
+                Login here
+              </span>
+            </p>
+          </div>
         </CardBody>
       </Card>
-
       <CreatePassword 
-        isOpen={isOpen}
+        isOpen={isOpen} 
         onClose={onClose}
         onSubmit={handleSetPassword}
         error={passwordError}
@@ -212,9 +392,7 @@ export default function CreateWallet() {
   );
 }
 
-// Utility functions
 const encryptWalletData = async (walletInfo, password) => {
-  // This is a placeholder - use proper encryption in production
   return btoa(JSON.stringify({
     data: walletInfo,
     timestamp: Date.now()
@@ -222,6 +400,5 @@ const encryptWalletData = async (walletInfo, password) => {
 };
 
 const hashPassword = async (password) => {
-  // This is a placeholder - use proper hashing in production
   return btoa(password);
-}; 
+};
