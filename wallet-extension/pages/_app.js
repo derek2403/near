@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import "@/styles/globals.css";
 import { NextUIProvider } from "@nextui-org/react";
 
-export default function App({ Component, pageProps }) {
+export default function App({ Component }) {
   const [currentPage, setCurrentPage] = useState('index');
-  const [pageProps, setPageProps] = useState({});
+  const [currentProps, setCurrentProps] = useState({});
 
   // Custom router for extension
   const router = {
@@ -12,7 +12,7 @@ export default function App({ Component, pageProps }) {
       const page = path.replace('/', '') || 'index';
       setCurrentPage(page);
     },
-    query: pageProps
+    query: currentProps
   };
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function App({ Component, pageProps }) {
 
   return (
     <NextUIProvider>
-      <PageComponent {...pageProps} router={router} />
+      <PageComponent router={router} />
     </NextUIProvider>
   );
 }

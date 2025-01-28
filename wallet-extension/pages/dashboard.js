@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { Card, CardBody, Button, Tooltip, Tabs, Tab } from "@nextui-org/react";
 import NativeNearDashboard from '../components/NativeNear/NativeNearDashboard';
 import ChainSignatureDashboard from '../components/ChainSignature/ChainSignatureDashboard';
-import NearIconSvg from '../public/icons/NearIcon.svg';
-import ChainIconSvg from '../public/icons/ChainIcon.svg';
+import { ArrowUpIcon, ArrowDownIcon, Cog8ToothIcon } from '@heroicons/react/24/outline';
 import { setupAdapter } from 'near-ca';
 import { ethers } from 'ethers';
-import { chains } from '../data/supportedChain.json';
+import supportedChain from '../data/supportedChain.json';
+const { chains } = supportedChain;
 
 const { connect, keyStores, providers } = nearAPI;
 
@@ -202,34 +202,6 @@ export default function Dashboard({ router }) {
     deriveEvmAddress();
   }, [walletInfo, evmAddress]);
 
-  const renderDashboard = () => {
-    const props = {
-      balance,
-      walletInfo,
-      transactions: getPaginatedTransactions(),
-      isLoadingTxns,
-      copied,
-      handleCopy,
-      formatDate,
-      getTransactionType,
-      getTransactionAmount,
-      router,
-      pagination: {
-        currentPage,
-        totalPages,
-        onPageChange: setCurrentPage
-      },
-      evmAddress,
-      isDerivingAddress,
-      derivationError,
-      chainBalances
-    };
-
-    return isVertical ? 
-      <NativeNearDashboard {...props} /> : 
-      <ChainSignatureDashboard {...props} />;
-  };
-
   if (!walletInfo) {
     return <div className="min-h-screen p-8 bg-gray-50 flex items-center justify-center">
       <Card>
@@ -241,8 +213,8 @@ export default function Dashboard({ router }) {
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen p-4 bg-gray-50">
+      <div className="max-w-4xl mx-auto space-y-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-6">
             <h1 className="text-2xl font-bold">Wallet Dashboard</h1>
@@ -262,7 +234,7 @@ export default function Dashboard({ router }) {
                 key="near"
                 title={
                   <div className="flex items-center space-x-2">
-                    <NearIconSvg className="w-4 h-4" />
+                    <span>🔷</span>
                     <span className="text-sm">Native NEAR</span>
                   </div>
                 }
@@ -271,7 +243,7 @@ export default function Dashboard({ router }) {
                 key="chain"
                 title={
                   <div className="flex items-center space-x-2">
-                    <ChainIconSvg className="w-4 h-4" />
+                    <span>⛓️</span>
                     <span className="text-sm">Chain Signature</span>
                   </div>
                 }
@@ -287,7 +259,47 @@ export default function Dashboard({ router }) {
           </Button>
         </div>
 
-        {renderDashboard()}
+        {isVertical ? (
+          <NativeNearDashboard 
+            balance={balance}
+            walletInfo={walletInfo}
+            transactions={transactions}
+            isLoadingTxns={isLoadingTxns}
+            copied={copied}
+            handleCopy={handleCopy}
+            formatDate={formatDate}
+            getTransactionType={getTransactionType}
+            getTransactionAmount={getTransactionAmount}
+            router={router}
+            pagination={{
+              currentPage,
+              totalPages,
+              onPageChange: setCurrentPage
+            }}
+          />
+        ) : (
+          <ChainSignatureDashboard 
+            balance={balance}
+            walletInfo={walletInfo}
+            transactions={transactions}
+            isLoadingTxns={isLoadingTxns}
+            copied={copied}
+            handleCopy={handleCopy}
+            formatDate={formatDate}
+            getTransactionType={getTransactionType}
+            getTransactionAmount={getTransactionAmount}
+            router={router}
+            pagination={{
+              currentPage,
+              totalPages,
+              onPageChange: setCurrentPage
+            }}
+            evmAddress={evmAddress}
+            isDerivingAddress={isDerivingAddress}
+            derivationError={derivationError}
+            chainBalances={chainBalances}
+          />
+        )}
       </div>
     </div>
   );

@@ -15,7 +15,8 @@ import {
 } from "@nextui-org/react";
 import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
-import { coins } from '../../data/coins.json';
+import coinsData from '../../data/coins.json';
+const coins = coinsData.default;
 
 const { connect, keyStores } = nearAPI;
 
@@ -46,13 +47,13 @@ export default function NativeNearSend({ router }) {
     setIsLoading(true);
     
     try {
-      chrome.storage.local.get(['publicWalletInfo', 'encryptedWallet'], async (result) => {
-        if (!result.publicWalletInfo || !result.encryptedWallet) {
+      chrome.storage.local.get(['publicWalletInfo', 'encryptedWallet'], async (data) => {
+        if (!data.publicWalletInfo || !data.encryptedWallet) {
           throw new Error('Wallet information not found');
         }
 
-        const parsedInfo = JSON.parse(result.publicWalletInfo);
-        const decryptedWallet = JSON.parse(atob(result.encryptedWallet));
+        const parsedInfo = JSON.parse(data.publicWalletInfo);
+        const decryptedWallet = JSON.parse(atob(data.encryptedWallet));
         
         const connectionConfig = {
           networkId: "testnet",
