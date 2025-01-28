@@ -19,29 +19,26 @@ import * as nearAPI from "near-api-js";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { coins } from '../../data/coins.json';
 import { chains } from '../../data/supportedChain.json';
-import Image from 'next/image';
+import { useEvmSend } from '../../hooks/useEvmSend';
 
 const { connect, keyStores } = nearAPI;
 
-const getTokenDescription = (coin, chain) => {
-  // If the token symbol matches the chain's native token symbol, it's native
-  if (coin.symbol === chain.symbol) {
-    return `Native Token on ${chain.name}`;
-  }
-  
-  // Special case for NEAR token
-  if (coin.symbol === 'NEAR') {
-    return `Wrapped NEAR on ${chain.name}`;
-  }
-  
-  // For other tokens
-  return `${coin.label} on ${chain.name}`;
+// Add this constant for ETH token
+const ETH_TOKEN = {
+  key: 'eth',
+  label: 'Ethereum',
+  symbol: 'ETH',
+  icon: '/icons/eth.svg'  // Make sure you have this icon
+};
+
+const getTokenDescription = (chain) => {
+  return `Native ETH on ${chain.name}`;
 };
 
 export default function ChainSignatureSend() {
   const router = useRouter();
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
-  const [selectedCoin, setSelectedCoin] = useState(coins[0]);
+  const [selectedCoin, setSelectedCoin] = useState(ETH_TOKEN);
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [error, setError] = useState(null);
@@ -51,6 +48,14 @@ export default function ChainSignatureSend() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedChain, setSelectedChain] = useState(chains[0]);
+
+  const { 
+    sendTransaction, 
+    isLoading: isSending, 
+    error: sendError, 
+    txHash: evmTxHash,
+    getExplorerUrl 
+  } = useEvmSend();
 
   const handleAmountChange = (e) => {
     const value = e.target.value;
@@ -64,10 +69,9 @@ export default function ChainSignatureSend() {
     setError(null);
     setIsError(false);
     setErrorMessage('');
-    setIsLoading(true);
     
     try {
-      // Get sender's wallet info from localStorage
+      // Get wallet info from localStorage
       const publicInfo = localStorage.getItem('publicWalletInfo');
       const encryptedWallet = localStorage.getItem('encryptedWallet');
       
@@ -77,51 +81,28 @@ export default function ChainSignatureSend() {
 
       const parsedInfo = JSON.parse(publicInfo);
       const decryptedWallet = JSON.parse(atob(encryptedWallet));
-      
-      // Setup connection to NEAR
-      const connectionConfig = {
-        networkId: "testnet",
-        keyStore: new keyStores.InMemoryKeyStore(),
-        nodeUrl: "https://rpc.testnet.near.org",
-      };
 
-      // Connect to NEAR
-      const near = await connect(connectionConfig);
-      
-      // Create keyPair from private key
-      const keyPair = nearAPI.utils.KeyPair.fromString(decryptedWallet.data.secretKey);
-      await connectionConfig.keyStore.setKey("testnet", parsedInfo.accountId, keyPair);
+      // Send the transaction using the hook
+      const result = await sendTransaction({
+        accountId: parsedInfo.accountId,
+        secretKey: decryptedWallet.data.secretKey,
+        recipientAddress,
+        amount,
+        selectedChain
+      });
 
-      // Get account object
-      const account = await near.account(parsedInfo.accountId);
-
-      // Convert NEAR amount to yoctoNEAR
-      const yoctoAmount = nearAPI.utils.format.parseNearAmount(amount);
-
-      // Send transaction
-      const result = await account.sendMoney(
-        recipientAddress, // receiver account
-        yoctoAmount // amount in yoctoNEAR
-      );
-
-      // Get transaction hash
-      const txHash = result.transaction.hash;
-      setTxHash(txHash);
-      
-      // Set success state
-      setIsSuccess(true);
+      if (result.success) {
+        setIsSuccess(true);
+      } else {
+        setIsError(true);
+        setErrorMessage(result.error);
+      }
 
     } catch (err) {
       console.error('Transaction error:', err);
       setErrorMessage(err.message || 'Failed to send transaction');
       setIsError(true);
-    } finally {
-      setIsLoading(false);
     }
-  };
-
-  const getExplorerUrl = (hash) => {
-    return `https://testnet.nearblocks.io/txns/${hash}`;
   };
 
   if (isSuccess) {
@@ -153,12 +134,12 @@ export default function ChainSignatureSend() {
               </p>
               <p className="text-sm flex items-center justify-center gap-2">
                 <span className="text-gray-500">Transaction Hash:</span>{' '}
-                <span className="font-medium">{txHash}</span>
+                <span className="font-medium">{evmTxHash}</span>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => window.open(getExplorerUrl(txHash), '_blank')}
+                  onPress={() => window.open(getExplorerUrl(evmTxHash, selectedChain), '_blank')}
                   className="min-w-unit-8 w-8 h-8"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
@@ -276,10 +257,10 @@ export default function ChainSignatureSend() {
           </div>
 
           <form onSubmit={onSubmit} className="space-y-6">
-            {/* Amount Input with Coin Selector */}
+            {/* Amount Input with Chain Selector */}
             <div className="relative">
               <Input
-              isRequired
+                isRequired
                 type="text"
                 size="lg"
                 label="Amount"
@@ -295,19 +276,16 @@ export default function ChainSignatureSend() {
                     <div className="flex items-center gap-2">
                       <div className="relative">
                         {/* Main Chain Logo */}
-                        <Image
+                        <img 
                           src={selectedChain.logo} 
                           alt={selectedChain.name} 
-                          width={40}
-                          height={40}
+                          className="w-10 h-10"
                         />
-                        {/* Token Logo - Smaller and overlapping, removed border-2 border-white */}
-                        <Image 
-                          src={selectedCoin.icon} 
-                          alt={selectedCoin.label} 
+                        {/* ETH Logo */}
+                        <img 
+                          src={ETH_TOKEN.icon} 
+                          alt={ETH_TOKEN.label} 
                           className="w-6 h-6 rounded-full absolute -bottom-1 -right-1"
-                          width={24}
-                          height={24}
                         />
                       </div>
                       <div>
@@ -315,7 +293,7 @@ export default function ChainSignatureSend() {
                           {selectedChain.name}
                         </p>
                         <p className="text-sm text-default-500 text-left">
-                          {selectedCoin.label}
+                          ETH
                         </p>
                       </div>
                     </div>
@@ -346,17 +324,17 @@ export default function ChainSignatureSend() {
               color="primary"
               className="w-full"
               size="lg"
-              isDisabled={!amount || !recipientAddress || isLoading}
-              isLoading={isLoading}
+              isDisabled={!amount || !recipientAddress || isSending}
+              isLoading={isSending}
               spinner={<Spinner color="white" size="sm" />}
             >
-              {isLoading ? 'Sending...' : 'Continue'}
+              {isSending ? 'Sending...' : 'Continue'}
             </Button>
           </form>
         </CardBody>
       </Card>
 
-      {/* Chain and Token Selection Modal */}
+      {/* Modified Modal for Chain Selection Only */}
       <Modal
         backdrop="opaque"
         isOpen={isOpen}
@@ -367,107 +345,42 @@ export default function ChainSignatureSend() {
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">Select Chain & Token</ModalHeader>
-              <ModalBody className="p-0">
-                <div className="flex">
-                  {/* Left side - Chain Selection (Fixed) */}
-                  <div className="w-1/3 p-6 border-r">
-                    <h3 className="text-sm font-medium text-gray-500 mb-4">Select Chain</h3>
-                    <div className="space-y-2">
-                      {chains.map((chain) => (
-                        <div
-                          key={chain.prefix}
-                          className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                            selectedChain.prefix === chain.prefix 
-                              ? 'bg-primary-100 border border-primary' 
-                              : 'hover:bg-default-100'
-                          }`}
-                          onClick={() => setSelectedChain(chain)}
-                        >
-                          <Image 
-                            src={chain.logo} 
-                            alt={chain.name} 
-                            width={40}
-                            height={40}
-                          />
-                          <div>
-                            <p className="font-medium">{chain.name}</p>
-                            <p className="text-xs text-default-500">{chain.symbol}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Right side - Token Selection (Scrollable) */}
-                  <div className="w-2/3 max-h-[60vh] overflow-y-auto">
-                    <div className="p-6">
-                      <Autocomplete
-                        defaultItems={coins}
-                        placeholder="Search tokens"
-                        className="mb-6"
-                        onSelectionChange={(key) => {
-                          const selected = coins.find(coin => coin.key === key);
-                          if (selected) {
-                            setSelectedCoin(selected);
-                            onClose();
-                          }
-                        }}
-                      >
-                        {(coin) => (
-                          <AutocompleteItem key={coin.key} className="p-2">
-                            <div className="flex items-center gap-2">
-                              <Image 
-                                src={coin.icon} 
-                                alt={coin.label} 
-                                className="w-8 h-8 rounded-full"
-                                width={32}
-                                height={32}
-                              />
-                              <div>
-                                <p className="font-medium">{coin.label}</p>
-                                <p className="text-sm text-default-500">
-                                  {getTokenDescription(coin, selectedChain)}
-                                </p>
-                              </div>
-                            </div>
-                          </AutocompleteItem>
-                        )}
-                      </Autocomplete>
-
-                      {/* Popular Tokens Section */}
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-medium text-gray-500">Popular tokens on {selectedChain.name}</h3>
-                        <div className="space-y-2">
-                          {coins.map((coin) => (
-                            <div
-                              key={coin.key}
-                              className="flex items-center gap-3 p-3 hover:bg-default-100 rounded-lg cursor-pointer"
-                              onClick={() => {
-                                setSelectedCoin(coin);
-                                onClose();
-                              }}
-                            >
-                              <Image 
-                                src={coin.icon} 
-                                alt={coin.label} 
-                                className="w-8 h-8 rounded-full"
-                                width={32}
-                                height={32}
-                              />
-                              <div className="flex-grow">
-                                <p className="font-medium">{coin.label}</p>
-                                <p className="text-sm text-default-500">{coin.symbol}</p>
-                              </div>
-                              <p className="text-sm text-default-500 hidden sm:block">
-                                {getTokenDescription(coin, selectedChain)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+              <ModalHeader className="flex flex-col gap-1">Select Chain</ModalHeader>
+              <ModalBody className="p-6">
+                <div className="space-y-2">
+                  {chains.map((chain) => (
+                    <div
+                      key={chain.prefix}
+                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedChain.prefix === chain.prefix 
+                          ? 'bg-primary-100 border border-primary' 
+                          : 'hover:bg-default-100'
+                      }`}
+                      onClick={() => {
+                        setSelectedChain(chain);
+                        onClose();
+                      }}
+                    >
+                      <div className="relative">
+                        <img 
+                          src={chain.logo} 
+                          alt={chain.name} 
+                          className="w-8 h-8"
+                        />
+                        <img 
+                          src={ETH_TOKEN.icon}
+                          alt="ETH"
+                          className="w-5 h-5 rounded-full absolute -bottom-1 -right-1"
+                        />
+                      </div>
+                      <div className="flex-grow">
+                        <p className="font-medium">{chain.name}</p>
+                        <p className="text-sm text-default-500">
+                          {getTokenDescription(chain)}
+                        </p>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </ModalBody>
             </>
