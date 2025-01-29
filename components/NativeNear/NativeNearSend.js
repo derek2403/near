@@ -111,7 +111,7 @@ export default function NativeNearSend() {
       <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-64 h-64 mb-6">
           <DotLottieReact
-            src="https://lottie.host/de3a77dc-d723-4462-a832-e2928836c922/7LKOuBzujP.lottie"
+            src="/animations/success.lottie"
             autoplay
             loop={false}
           />
@@ -183,7 +183,7 @@ export default function NativeNearSend() {
       <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-64 h-64 mb-6">
           <DotLottieReact
-            src="https://lottie.host/f971bfe3-8fe1-4deb-affa-1c78011f4daa/VNtlmMxARH.lottie"
+            src="/animations/error.lottie"
             autoplay
             loop={false}
           />
