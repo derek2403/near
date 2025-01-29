@@ -1,37 +1,9 @@
 import { useState } from 'react';
-import { setupAdapter } from "../near-ca-lib";
 import { useEvmDerivation } from '../hooks/useEvmDerivation';
+import { useEvmSend } from '../hooks/useEvmSend';
 import { useRouter } from 'next/router';
 
 export const SEPOLIA_CHAIN_ID = 11155111;
-
-async function sendETH(toAddress, amountInWei, walletInfo, derivationPath = 'ethereum,1') {
-  try {
-    if (!walletInfo?.accountId || !walletInfo?.privateKey) {
-      throw new Error('Wallet info not available');
-    }
-
-    // Setup the adapter with wallet info
-    const evm = await setupAdapter({
-      accountId: walletInfo.accountId,
-      mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
-      privateKey: walletInfo.privateKey,
-      derivationPath,
-    });
-
-    const result = await evm.signAndSendTransaction({
-      to: toAddress,
-      value: amountInWei,
-      chainId: SEPOLIA_CHAIN_ID,
-    });
-
-    console.log("Transaction sent successfully!", result);
-    return result;
-  } catch (error) {
-    console.error("Error details:", error);
-    throw error;
-  }
-}
 
 export default function SendETHPage() {
   const [toAddress, setToAddress] = useState('');
@@ -40,10 +12,8 @@ export default function SendETHPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   
-  // Get evmAddress from query params like ChainSignatureDashboard does
   const { evmAddress: queryEvmAddress } = router.query;
 
-  // Use the hook with dynamic wallet info
   const walletInfo = {
     accountId: process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID,
     privateKey: process.env.NEXT_PUBLIC_NEAR_ACCOUNT_PRIVATE_KEY,
@@ -55,7 +25,8 @@ export default function SendETHPage() {
     derivationError 
   } = useEvmDerivation(walletInfo);
 
-  // Use query param address if available, otherwise use derived address
+  const { sendETH } = useEvmSend();
+
   const activeEvmAddress = queryEvmAddress || evmAddress;
 
   const handleSubmit = async (e) => {
