@@ -5,6 +5,7 @@ import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon }
 import { chains } from '../../data/supportedChain.json';
 import { useChainBalances } from '../../hooks/useChainBalances';
 import { useEvmDerivation } from '../../hooks/useEvmDerivation';
+import { DotLottieReact } from '@dotlottie/react';
 
 export default function ChainSignatureDashboard({ 
   walletInfo, 
@@ -232,6 +233,21 @@ export default function ChainSignatureDashboard({
           </Tabs>
         </CardBody>
       </Card>
+
+      {/* Success or Error Animation */}
+      {isDeriving ? (
+        <DotLottieReact
+          src="/animations/success.lottie"
+          autoplay
+          loop={false}
+        />
+      ) : deriveError ? (
+        <DotLottieReact
+          src="/animations/fail.lottie"
+          autoplay
+          loop={false}
+        />
+      ) : null}
     </>
   );
 } 

@@ -183,7 +183,7 @@ export default function NativeNearSend() {
       <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-64 h-64 mb-6">
           <DotLottieReact
-            src="/animations/error.lottie"
+            src="/animations/fail.lottie"
             autoplay
             loop={false}
           />
