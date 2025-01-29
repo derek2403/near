@@ -16,7 +16,7 @@
       "rpcUrl": "https://sepolia.base.org",
       "symbol": "ETH",
       "logo": "https://altcoinsbox.com/wp-content/uploads/2023/02/base-logo-in-blue.png",
-      "explorerUrl": "https://sepolia-explorer.base.org/"
+      "explorerUrl": "https://sepolia.basescan.org/address/"
     },
     {
       "name": "Optimism",
