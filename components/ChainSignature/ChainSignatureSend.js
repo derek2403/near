@@ -125,20 +125,27 @@ export default function ChainSignatureSend() {
       const parsedInfo = JSON.parse(publicInfo);
       const decryptedWallet = JSON.parse(atob(encryptedWallet));
 
-      // Send the transaction using the hook
-      const result = await sendTransaction({
-        accountId: parsedInfo.accountId,
-        secretKey: decryptedWallet.data.secretKey,
-        recipientAddress,
-        amount,
-        selectedChain
-      });
+      // For now, we'll only handle ETH on Sepolia
+      if (selectedChain.prefix === 'ethereum') {
+        const result = await sendTransaction({
+          accountId: parsedInfo.accountId,
+          secretKey: decryptedWallet.data.secretKey,
+          recipientAddress,
+          amount,
+          selectedChain
+        });
 
-      if (result.success) {
-        setIsSuccess(true);
+        if (result.success) {
+          setTxHash(result.hash);
+          setIsSuccess(true);
+        } else {
+          setIsError(true);
+          setErrorMessage(result.error);
+        }
       } else {
+        // For other chains, show "coming soon" message
         setIsError(true);
-        setErrorMessage(result.error);
+        setErrorMessage('This chain is coming soon. Please use Ethereum for now.');
       }
 
     } catch (err) {
