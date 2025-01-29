@@ -16,7 +16,7 @@ import {
 } from "@nextui-org/react";
 import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { DotLottiePlayer } from '@dotlottie/react-player';
 import { coins } from '../../data/coins.json';
 
 const { connect, keyStores } = nearAPI;
@@ -110,7 +110,7 @@ export default function NativeNearSend() {
     return (
       <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-64 h-64 mb-6">
-          <DotLottieReact
+          <DotLottiePlayer
             src="/animations/success.lottie"
             autoplay
             loop={false}
@@ -182,7 +182,7 @@ export default function NativeNearSend() {
     return (
       <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-64 h-64 mb-6">
-          <DotLottieReact
+          <DotLottiePlayer
             src="/animations/fail.lottie"
             autoplay
             loop={false}
