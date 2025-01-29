@@ -6,7 +6,6 @@ import { Input, Button, Card, CardBody, Tabs, Tab } from "@nextui-org/react";
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import CreatePassword from '../components/CreatePassword';
 import { useDisclosure } from '@nextui-org/react';
-import { extensionRouter } from '../utils/extensionRouter';
 import { storage, crypto } from '../utils/storage';
 
 const { connect, keyStores, KeyPair } = nearAPI;
@@ -107,33 +106,19 @@ export default function Login() {
 
   const handleSetPassword = async (password) => {
     try {
-      console.log('Setting up wallet with password...');
-      
-      // Encrypt wallet info
       const encryptedWallet = await crypto.encrypt(tempWalletInfo, password);
       
-      // Store public info first
       const publicInfo = {
         accountId: tempWalletInfo.accountId,
         publicKey: tempWalletInfo.publicKey,
         loginMethod: tempWalletInfo.loginMethod
       };
       
-      console.log('Storing public wallet info...');
       await storage.set('publicWalletInfo', publicInfo);
-      
-      console.log('Storing encrypted wallet...');
       await storage.set('encryptedWallet', encryptedWallet);
-
-      console.log('Wallet setup complete, navigating to dashboard...');
-      onClose();
       
-      const isExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
-      if (isExtension) {
-        extensionRouter.replace('dashboard');
-      } else {
-        router.push('/dashboard');
-      }
+      onClose();
+      window.location.href = chrome.runtime.getURL('dashboard.html');
     } catch (error) {
       console.error('Error in handleSetPassword:', error);
       setPasswordError('Error securing wallet');
@@ -222,12 +207,7 @@ export default function Login() {
               Don&apos;t have a wallet?{' '}
               <span
                 onClick={() => {
-                  const isExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
-                  if (isExtension) {
-                    extensionRouter.replace('createWallet');
-                  } else {
-                    router.push('/createWallet');
-                  }
+                  window.location.href = chrome.runtime.getURL('createWallet.html');
                 }}
                 className="text-blue-600 cursor-pointer hover:underline"
               >

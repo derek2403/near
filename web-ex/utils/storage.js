@@ -1,26 +1,17 @@
 // Storage utility functions for extension
 export const storage = {
   get: async (key) => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      return new Promise((resolve) => {
-        chrome.storage.local.get([key], (result) => {
-          resolve(result[key]);
-        });
+    return new Promise((resolve) => {
+      chrome.storage.local.get([key], (result) => {
+        resolve(result[key]);
       });
-    } else {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : null;
-    }
+    });
   },
 
   set: async (key, value) => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      return new Promise((resolve) => {
-        chrome.storage.local.set({ [key]: value }, resolve);
-      });
-    } else {
-      localStorage.setItem(key, JSON.stringify(value));
-    }
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ [key]: value }, resolve);
+    });
   },
 
   remove: async (key) => {

@@ -30,11 +30,13 @@ async function buildExtension() {
     await fs.copy(outDir, distDir);
 
     // Rename _next directory to assets
-    await fs.move(
-      path.join(distDir, '_next'),
-      path.join(distDir, 'assets'),
-      { overwrite: true }
-    );
+    if (await fs.pathExists(path.join(distDir, '_next'))) {
+      await fs.move(
+        path.join(distDir, '_next'),
+        path.join(distDir, 'assets'),
+        { overwrite: true }
+      );
+    }
 
     // Update paths in HTML files
     const htmlFiles = await fs.readdir(distDir);
@@ -46,9 +48,33 @@ async function buildExtension() {
           .replace(/\/_next\//g, './assets/')
           .replace(/"\/assets\//g, '"./assets/')
           .replace(/href="\/([^/])/g, 'href="./$1')
-          .replace(/src="\/([^/])/g, 'src="./$1');
+          .replace(/src="\/([^/])/g, 'src="./$1')
+          // Fix chunk loading paths
+          .replace(/".\/_next\//g, '"./assets/')
+          .replace(/"\/_next\//g, '"./assets/')
+          .replace(/\.\/assets\/static\/chunks/g, './assets/static/chunks');
         await fs.writeFile(filePath, content);
       }
+    }
+
+    // Ensure all required directories exist
+    const requiredDirs = [
+      path.join(distDir, 'assets/static/chunks'),
+      path.join(distDir, 'assets/static/css'),
+    ];
+
+    for (const dir of requiredDirs) {
+      await fs.ensureDir(dir);
+    }
+
+    // Copy static files
+    const staticSrc = path.join(outDir, '_next/static');
+    if (await fs.pathExists(staticSrc)) {
+      await fs.copy(
+        staticSrc,
+        path.join(distDir, 'assets/static'),
+        { overwrite: true }
+      );
     }
 
     // Copy extension files
