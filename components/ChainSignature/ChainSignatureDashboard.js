@@ -5,7 +5,6 @@ import { ClipboardIcon, ClipboardDocumentCheckIcon, ArrowUpIcon, ArrowDownIcon }
 import { chains } from '../../data/supportedChain.json';
 import { useChainBalances } from '../../hooks/useChainBalances';
 import { useEvmDerivation } from '../../hooks/useEvmDerivation';
-import { DotLottiePlayer } from '@dotlottie/react-player';
 
 
 export default function ChainSignatureDashboard({ 
@@ -234,25 +233,6 @@ export default function ChainSignatureDashboard({
           </Tabs>
         </CardBody>
       </Card>
-
-      {/* Success or Error Animation */}
-      {isDeriving ? (
-        <div className="w-64 h-64">
-          <DotLottiePlayer
-            src="/animations/success.lottie"
-            autoplay
-            loop={false}
-          />
-        </div>
-      ) : deriveError ? (
-        <div className="w-64 h-64">
-          <DotLottiePlayer
-            src="/animations/fail.lottie"
-            autoplay
-            loop={false}
-          />
-        </div>
-      ) : null}
     </>
   );
 } 
