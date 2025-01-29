@@ -82,20 +82,27 @@ export default function ChainSignatureSend() {
       const parsedInfo = JSON.parse(publicInfo);
       const decryptedWallet = JSON.parse(atob(encryptedWallet));
 
-      // Send the transaction using the hook
-      const result = await sendTransaction({
-        accountId: parsedInfo.accountId,
-        secretKey: decryptedWallet.data.secretKey,
-        recipientAddress,
-        amount,
-        selectedChain
-      });
+      // For now, we'll only handle ETH on Sepolia
+      if (selectedChain.prefix === 'ethereum') {
+        const result = await sendTransaction({
+          accountId: parsedInfo.accountId,
+          secretKey: decryptedWallet.data.secretKey,
+          recipientAddress,
+          amount,
+          selectedChain
+        });
 
-      if (result.success) {
-        setIsSuccess(true);
+        if (result.success) {
+          setTxHash(result.hash);
+          setIsSuccess(true);
+        } else {
+          setIsError(true);
+          setErrorMessage(result.error);
+        }
       } else {
+        // For other chains, show "coming soon" message
         setIsError(true);
-        setErrorMessage(result.error);
+        setErrorMessage('This chain is coming soon. Please use Ethereum for now.');
       }
 
     } catch (err) {
@@ -110,7 +117,7 @@ export default function ChainSignatureSend() {
       <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-64 h-64 mb-6">
           <DotLottieReact
-            src="https://lottie.host/de3a77dc-d723-4462-a832-e2928836c922/7LKOuBzujP.lottie"
+            src="/animations/success.lottie"
             autoplay
             loop={false}
           />
@@ -182,7 +189,7 @@ export default function ChainSignatureSend() {
       <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-64 h-64 mb-6">
           <DotLottieReact
-            src="https://lottie.host/f971bfe3-8fe1-4deb-affa-1c78011f4daa/VNtlmMxARH.lottie"
+            src="/animations/error.lottie"
             autoplay
             loop={false}
           />
