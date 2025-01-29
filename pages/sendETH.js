@@ -1,43 +1,32 @@
 import { useState } from 'react';
-import dotenv from "dotenv";
-import {
-  setupAdapter,
-} from "../near-ca-lib";
+import { setupAdapter } from "../near-ca-lib";
+import { useEvmDerivation } from '../hooks/useEvmDerivation';
+import { useRouter } from 'next/router';
 
-dotenv.config();
-
-// Constants from setup.ts
 export const SEPOLIA_CHAIN_ID = 11155111;
 
-async function sendETH(toAddress, amountInWei) {
+async function sendETH(toAddress, amountInWei, walletInfo, derivationPath = 'ethereum,1') {
   try {
-    const accountId = process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID;
-    const privateKey = process.env.NEXT_PUBLIC_NEAR_ACCOUNT_PRIVATE_KEY;
-    const mpcContractId = process.env.NEXT_PUBLIC_MPC_CONTRACT_ID;
-
-    if (!accountId || !mpcContractId) {
-      throw new Error(`Missing required environment variables`);
+    if (!walletInfo?.accountId || !walletInfo?.privateKey) {
+      throw new Error('Wallet info not available');
     }
 
-    // Setup the adapter exactly like send-eth.ts
+    // Setup the adapter with wallet info
     const evm = await setupAdapter({
-      accountId,
-      mpcContractId,
-      privateKey,
+      accountId: walletInfo.accountId,
+      mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
+      privateKey: walletInfo.privateKey,
+      derivationPath,
     });
 
-    // Use the exact same transaction structure as send-eth.ts
     const result = await evm.signAndSendTransaction({
-      // Sending to provided address
       to: toAddress,
-      // Amount in WEI
       value: amountInWei,
       chainId: SEPOLIA_CHAIN_ID,
     });
 
     console.log("Transaction sent successfully!", result);
     return result;
-
   } catch (error) {
     console.error("Error details:", error);
     throw error;
@@ -49,6 +38,25 @@ export default function SendETHPage() {
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  
+  // Get evmAddress from query params like ChainSignatureDashboard does
+  const { evmAddress: queryEvmAddress } = router.query;
+
+  // Use the hook with dynamic wallet info
+  const walletInfo = {
+    accountId: process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID,
+    privateKey: process.env.NEXT_PUBLIC_NEAR_ACCOUNT_PRIVATE_KEY,
+  };
+  
+  const { 
+    evmAddress, 
+    isDerivingAddress, 
+    derivationError 
+  } = useEvmDerivation(walletInfo);
+
+  // Use query param address if available, otherwise use derived address
+  const activeEvmAddress = queryEvmAddress || evmAddress;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,10 +64,19 @@ export default function SendETHPage() {
     setStatus('Processing...');
 
     try {
-      // Convert amount from ETH to WEI (1 ETH = 10^18 WEI)
+      if (!activeEvmAddress) {
+        throw new Error('EVM address not available');
+      }
+
       const amountInWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
       
-      const result = await sendETH(toAddress, amountInWei);
+      const result = await sendETH(
+        toAddress, 
+        amountInWei, 
+        walletInfo, 
+        'ethereum,1'
+      );
+      
       setStatus(`Transaction successful! Hash: ${result.hash}`);
     } catch (error) {
       setStatus(`Error: ${error.message}`);
@@ -67,6 +84,30 @@ export default function SendETHPage() {
       setIsLoading(false);
     }
   };
+
+  // Show loading state while deriving address
+  if (isDerivingAddress) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl mb-2">Deriving EVM address...</div>
+          <div className="text-sm text-gray-500">Please wait while we set up your wallet</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if derivation failed
+  if (derivationError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-red-500">
+          <div className="text-xl mb-2">Error</div>
+          <div>{derivationError}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
@@ -76,6 +117,11 @@ export default function SendETHPage() {
             <div className="divide-y divide-gray-200">
               <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
                 <h1 className="text-2xl font-bold mb-8">Send ETH</h1>
+                {activeEvmAddress && (
+                  <div className="text-sm text-gray-500">
+                    From: {activeEvmAddress}
+                  </div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
