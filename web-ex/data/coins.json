@@ -1,0 +1,53 @@
+{
+  "coins": [
+    {
+      "key": "near",
+      "label": "NEAR",
+      "symbol": "NEAR",
+      "icon": "/icons/near.png",
+      "description": "Native NEAR Token"
+    },
+    { 
+      "label": "USD Coin", 
+      "key": "usdc", 
+      "icon": "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
+      "symbol": "USDC",
+      "description": "USD Coin on NEAR" 
+    },
+    { 
+      "label": "Tether USD", 
+      "key": "usdt", 
+      "icon": "https://cryptologos.cc/logos/tether-usdt-logo.png",
+      "symbol": "USDT",
+      "description": "Tether USD on NEAR" 
+    },
+    { 
+      "label": "Ethereum", 
+      "key": "eth", 
+      "icon": "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+      "symbol": "ETH",
+      "description": "Wrapped Ethereum on NEAR" 
+    },
+    { 
+      "label": "Optimism", 
+      "key": "op", 
+      "icon": "https://cryptologos.cc/logos/optimism-ethereum-op-logo.png",
+      "symbol": "OP",
+      "description": "Optimism Token on NEAR" 
+    },
+    { 
+      "label": "Arbitrum", 
+      "key": "arb", 
+      "icon": "https://cryptologos.cc/logos/arbitrum-arb-logo.png",
+      "symbol": "ARB",
+      "description": "Arbitrum Token on NEAR" 
+    },
+    { 
+      "label": "Base", 
+      "key": "base", 
+      "icon": "https://altcoinsbox.com/wp-content/uploads/2023/02/base-logo-in-blue.png",
+      "symbol": "ETH",
+      "description": "Base Token on NEAR" 
+    }
+  ]
+} 
