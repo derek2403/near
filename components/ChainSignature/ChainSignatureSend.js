@@ -36,6 +36,12 @@ const getTokenDescription = (chain) => {
   return `Native ETH on ${chain.name}`;
 };
 
+// Add a helper function to truncate hash
+const truncateHash = (hash) => {
+  if (!hash) return '';
+  return `${hash.slice(0, 20)}...`;
+};
+
 export default function ChainSignatureSend() {
   const router = useRouter();
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
@@ -197,12 +203,12 @@ export default function ChainSignatureSend() {
               </p>
               <p className="text-sm flex items-center justify-center gap-2">
                 <span className="text-gray-500">Transaction Hash:</span>{' '}
-                <span className="font-medium">{txHash}</span>
+                <span className="font-medium">{truncateHash(txHash)}</span>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => window.open(getExplorerUrl(txHash, selectedChain), '_blank')}
+                  onPress={() => window.open(`https://sepolia.etherscan.io/tx/${txHash}`, '_blank')}
                   className="min-w-unit-8 w-8 h-8"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
