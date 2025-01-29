@@ -140,7 +140,7 @@ export default function ChainSignatureSend() {
           setIsSuccess(true);
         } else {
           setIsError(true);
-          setErrorMessage(result.error);
+          setErrorMessage(result.error || 'Transaction failed');
         }
       } else {
         // For other chains, show "coming soon" message
@@ -150,8 +150,8 @@ export default function ChainSignatureSend() {
 
     } catch (err) {
       console.error('Transaction error:', err);
-      setErrorMessage(err.message || 'Failed to send transaction');
       setIsError(true);
+      setErrorMessage(err.message || 'Failed to send transaction');
     }
   };
 
@@ -189,7 +189,7 @@ export default function ChainSignatureSend() {
             <div className="space-y-2 mb-6">
               <p className="text-sm">
                 <span className="text-gray-500">Amount:</span>{' '}
-                <span className="font-medium">{amount} {selectedCoin.label}</span>
+                <span className="font-medium">{amount} ETH</span>
               </p>
               <p className="text-sm">
                 <span className="text-gray-500">To:</span>{' '}
@@ -197,12 +197,12 @@ export default function ChainSignatureSend() {
               </p>
               <p className="text-sm flex items-center justify-center gap-2">
                 <span className="text-gray-500">Transaction Hash:</span>{' '}
-                <span className="font-medium">{evmTxHash}</span>
+                <span className="font-medium">{txHash}</span>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => window.open(getExplorerUrl(evmTxHash, selectedChain), '_blank')}
+                  onPress={() => window.open(getExplorerUrl(txHash, selectedChain), '_blank')}
                   className="min-w-unit-8 w-8 h-8"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
@@ -261,17 +261,19 @@ export default function ChainSignatureSend() {
             <div className="space-y-2 mb-6">
               <p className="text-sm">
                 <span className="text-gray-500">Amount:</span>{' '}
-                <span className="font-medium">{amount} {selectedCoin.label}</span>
+                <span className="font-medium">{amount} ETH</span>
               </p>
               <p className="text-sm">
                 <span className="text-gray-500">To:</span>{' '}
                 <span className="font-medium">{recipientAddress}</span>
               </p>
-              <div className="mt-4 p-4 bg-danger-50 rounded-lg">
-                <p className="text-danger text-sm font-medium">
-                  Error: {errorMessage}
-                </p>
-              </div>
+              {errorMessage && (
+                <div className="mt-4 p-4 bg-danger-50 rounded-lg">
+                  <p className="text-danger text-sm font-medium">
+                    Error: {errorMessage}
+                  </p>
+                </div>
+              )}
             </div>
             
             {/* Action Buttons */}
