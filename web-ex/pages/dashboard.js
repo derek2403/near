@@ -5,6 +5,7 @@ import * as nearAPI from "near-api-js";
 import NativeNearDashboard from '../components/NativeNear/NativeNearDashboard';
 import NearIconSvg from '../public/icons/NearIcon.svg';
 import { storage } from '../utils/storage';
+import { useRouter } from 'next/router';
 
 const { connect, keyStores, providers } = nearAPI;
 
@@ -18,6 +19,7 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 5;
+  const router = useRouter();
 
   useEffect(() => {
     const checkWallet = async () => {
@@ -26,7 +28,12 @@ export default function Dashboard() {
         const publicInfo = await storage.get('publicWalletInfo');
         
         if (!publicInfo) {
-          window.location.href = chrome.runtime.getURL('index.html');
+          const isExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
+          if (isExtension) {
+            window.location.href = chrome.runtime.getURL('index.html');
+          } else {
+            router.push('/');
+          }
           return;
         }
         
@@ -68,6 +75,15 @@ export default function Dashboard() {
     return nearAPI.utils.format.formatNearAmount(tx.actions[0]?.args?.deposit || "0");
   };
 
+  const handleSettingsClick = () => {
+    const isExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
+    if (isExtension) {
+      window.location.href = chrome.runtime.getURL('settings.html');
+    } else {
+      router.push('/settings');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-[600px] flex items-center justify-center">
@@ -84,9 +100,7 @@ export default function Dashboard() {
           <Button
             isIconOnly
             variant="light"
-            onPress={() => {
-              window.location.href = chrome.runtime.getURL('settings.html');
-            }}
+            onPress={handleSettingsClick}
           >
             <Cog8ToothIcon className="h-6 w-6" />
           </Button>

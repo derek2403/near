@@ -24,7 +24,7 @@ export default function Home() {
     
     const isExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
     if (isExtension) {
-      extensionRouter.replace(path);
+      window.location.href = chrome.runtime.getURL(`${path}.html`);
     } else {
       router.replace(path);
     }
@@ -79,21 +79,21 @@ export default function Home() {
           <p className="text-gray-600 mb-6">Continue to your NEAR wallet.</p>
 
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={handleClick('dashboard')}
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors mb-4"
           >
             Go to Dashboard
           </button>
 
           <button
-            onClick={() => router.push('/login')}
+            onClick={handleClick('login')}
             className="w-full border border-blue-600 text-blue-600 py-3 px-4 rounded-lg hover:bg-blue-50 transition-colors mb-4"
           >
             Login to Different Wallet
           </button>
 
           <button
-            onClick={() => router.push('/createWallet')}
+            onClick={handleClick('createWallet')}
             className="w-full text-blue-600 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Create New Wallet
