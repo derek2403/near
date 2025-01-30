@@ -107,7 +107,8 @@ export function useEvmSend() {
 
   const getExplorerUrl = (hash, selectedChain) => {
     if (!hash || !selectedChain?.explorerUrl) return '';
-    return `${selectedChain.explorerUrl}tx/${hash}`;
+    const baseUrl = selectedChain.explorerUrl.replace('address/', '');
+    return `${baseUrl}tx/${hash}`;
   };
 
   return {
