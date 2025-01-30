@@ -21,7 +21,6 @@ export function useEvmSend() {
         throw new Error('Wallet info not available');
       }
 
-      // Setup the adapter with wallet info
       const evm = await setupAdapter({
         accountId: walletInfo.accountId,
         mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
@@ -36,7 +35,7 @@ export function useEvmSend() {
       });
 
       console.log("Transaction sent successfully!", result);
-      return result;
+      return { hash: result };
     } catch (error) {
       console.error("Error details:", error);
       throw error;
@@ -70,13 +69,18 @@ export function useEvmSend() {
         derivationPath
       );
 
+      if (!result?.hash) {
+        throw new Error('No transaction hash received');
+      }
+
       setTxHash(result.hash);
       return { success: true, hash: result.hash };
 
     } catch (err) {
       console.error('Transaction error:', err);
-      setError(err.message || 'Failed to send transaction');
-      return { success: false, error: err.message };
+      const errorMessage = err.message || 'Failed to send transaction';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }

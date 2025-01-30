@@ -6,6 +6,7 @@ import { chains } from '../../data/supportedChain.json';
 import { useChainBalances } from '../../hooks/useChainBalances';
 import Image from 'next/image';
 
+
 export default function ChainSignatureDashboard({ 
   walletInfo, 
   transactions, 

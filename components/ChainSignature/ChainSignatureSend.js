@@ -16,7 +16,7 @@ import {
 } from "@nextui-org/react";
 import { ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import * as nearAPI from "near-api-js";
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { DotLottiePlayer } from '@dotlottie/react-player';
 import { coins } from '../../data/coins.json';
 import { chains } from '../../data/supportedChain.json';
 import { useEvmSend } from '../../hooks/useEvmSend';
@@ -33,6 +33,12 @@ const ETH_TOKEN = {
 
 const getTokenDescription = (chain) => {
   return `Native ETH on ${chain.name}`;
+};
+
+// Add a helper function to truncate hash
+const truncateHash = (hash) => {
+  if (!hash) return '';
+  return `${hash.slice(0, 20)}...`;
 };
 
 export default function ChainSignatureSend() {
@@ -97,7 +103,7 @@ export default function ChainSignatureSend() {
           setIsSuccess(true);
         } else {
           setIsError(true);
-          setErrorMessage(result.error);
+          setErrorMessage(result.error || 'Transaction failed');
         }
       } else {
         // For other chains, show "coming soon" message
@@ -107,8 +113,8 @@ export default function ChainSignatureSend() {
 
     } catch (err) {
       console.error('Transaction error:', err);
-      setErrorMessage(err.message || 'Failed to send transaction');
       setIsError(true);
+      setErrorMessage(err.message || 'Failed to send transaction');
     }
   };
 
@@ -116,7 +122,7 @@ export default function ChainSignatureSend() {
     return (
       <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-64 h-64 mb-6">
-          <DotLottieReact
+          <DotLottiePlayer
             src="/animations/success.lottie"
             autoplay
             loop={false}
@@ -133,7 +139,7 @@ export default function ChainSignatureSend() {
             <div className="space-y-2 mb-6">
               <p className="text-sm">
                 <span className="text-gray-500">Amount:</span>{' '}
-                <span className="font-medium">{amount} {selectedCoin.label}</span>
+                <span className="font-medium">{amount} ETH</span>
               </p>
               <p className="text-sm">
                 <span className="text-gray-500">To:</span>{' '}
@@ -141,12 +147,12 @@ export default function ChainSignatureSend() {
               </p>
               <p className="text-sm flex items-center justify-center gap-2">
                 <span className="text-gray-500">Transaction Hash:</span>{' '}
-                <span className="font-medium">{evmTxHash}</span>
+                <span className="font-medium">{truncateHash(txHash)}</span>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => window.open(getExplorerUrl(evmTxHash, selectedChain), '_blank')}
+                  onPress={() => window.open(`https://sepolia.etherscan.io/tx/${txHash}`, '_blank')}
                   className="min-w-unit-8 w-8 h-8"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
@@ -188,8 +194,8 @@ export default function ChainSignatureSend() {
     return (
       <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center justify-center">
         <div className="w-64 h-64 mb-6">
-          <DotLottieReact
-            src="/animations/error.lottie"
+          <DotLottiePlayer
+            src="/animations/fail.lottie"
             autoplay
             loop={false}
           />
@@ -205,17 +211,19 @@ export default function ChainSignatureSend() {
             <div className="space-y-2 mb-6">
               <p className="text-sm">
                 <span className="text-gray-500">Amount:</span>{' '}
-                <span className="font-medium">{amount} {selectedCoin.label}</span>
+                <span className="font-medium">{amount} ETH</span>
               </p>
               <p className="text-sm">
                 <span className="text-gray-500">To:</span>{' '}
                 <span className="font-medium">{recipientAddress}</span>
               </p>
-              <div className="mt-4 p-4 bg-danger-50 rounded-lg">
-                <p className="text-danger text-sm font-medium">
-                  Error: {errorMessage}
-                </p>
-              </div>
+              {errorMessage && (
+                <div className="mt-4 p-4 bg-danger-50 rounded-lg">
+                  <p className="text-danger text-sm font-medium">
+                    Error: {errorMessage}
+                  </p>
+                </div>
+              )}
             </div>
             
             {/* Action Buttons */}
