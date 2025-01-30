@@ -57,26 +57,6 @@ async function buildExtension() {
       }
     }
 
-    // Ensure all required directories exist
-    const requiredDirs = [
-      path.join(distDir, 'assets/static/chunks'),
-      path.join(distDir, 'assets/static/css'),
-    ];
-
-    for (const dir of requiredDirs) {
-      await fs.ensureDir(dir);
-    }
-
-    // Copy static files
-    const staticSrc = path.join(outDir, '_next/static');
-    if (await fs.pathExists(staticSrc)) {
-      await fs.copy(
-        staticSrc,
-        path.join(distDir, 'assets/static'),
-        { overwrite: true }
-      );
-    }
-
     // Copy extension files
     console.log('Copying extension files...');
     await fs.copy(
