@@ -58,8 +58,20 @@ export default function Settings() {
   };
 
   const handleLogout = async () => {
-    await storage.clear();
-    router.push('/');
+    try {
+      // For extension
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+        await storage.clear();
+        window.location.href = chrome.runtime.getURL('index.html');
+      } else {
+        // For web version
+        localStorage.clear();
+        router.push('/');
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+      setError('Error during logout');
+    }
   };
 
   const toggleVisibility = (field) => {
@@ -154,10 +166,10 @@ export default function Settings() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Private Key:</label>
                   <div className="flex items-center bg-white p-3 rounded-lg border">
                     <p className={`text-sm flex-1 break-all ${!showPrivateInfo.privateKey ? 'blur-sm' : ''}`}>
-                      {walletInfo.secretKey}
+                      {walletInfo.secretKey || walletInfo.privateKey}
                     </p>
                     <button
-                      onClick={() => handleCopy(walletInfo.secretKey, 'privateKey')}
+                      onClick={() => handleCopy(walletInfo.secretKey || walletInfo.privateKey, 'privateKey')}
                       className="ml-2 text-gray-500 hover:text-gray-700"
                     >
                       {copiedStates.privateKey ? (
