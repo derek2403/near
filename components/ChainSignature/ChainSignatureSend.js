@@ -120,7 +120,6 @@ export default function ChainSignatureSend() {
     setErrorMessage('');
     
     try {
-      // Get wallet info from localStorage
       const publicInfo = localStorage.getItem('publicWalletInfo');
       const encryptedWallet = localStorage.getItem('encryptedWallet');
       
@@ -131,27 +130,20 @@ export default function ChainSignatureSend() {
       const parsedInfo = JSON.parse(publicInfo);
       const decryptedWallet = JSON.parse(atob(encryptedWallet));
 
-      // For now, we'll only handle ETH on Sepolia
-      if (selectedChain.prefix === 'ethereum') {
-        const result = await sendTransaction({
-          accountId: parsedInfo.accountId,
-          secretKey: decryptedWallet.data.secretKey,
-          recipientAddress,
-          amount,
-          selectedChain
-        });
+      const result = await sendTransaction({
+        accountId: parsedInfo.accountId,
+        secretKey: decryptedWallet.data.secretKey,
+        recipientAddress,
+        amount,
+        selectedChain
+      });
 
-        if (result.success) {
-          setTxHash(result.hash);
-          setIsSuccess(true);
-        } else {
-          setIsError(true);
-          setErrorMessage(result.error || 'Transaction failed');
-        }
+      if (result.success) {
+        setTxHash(result.hash);
+        setIsSuccess(true);
       } else {
-        // For other chains, show "coming soon" message
         setIsError(true);
-        setErrorMessage('This chain is coming soon. Please use Ethereum for now.');
+        setErrorMessage(result.error || 'Transaction failed');
       }
 
     } catch (err) {
@@ -208,7 +200,7 @@ export default function ChainSignatureSend() {
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => window.open(`https://sepolia.etherscan.io/tx/${txHash}`, '_blank')}
+                  onPress={() => window.open(getExplorerUrl(txHash, selectedChain), '_blank')}
                   className="min-w-unit-8 w-8 h-8"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
