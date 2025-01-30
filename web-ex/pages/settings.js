@@ -95,7 +95,23 @@ export default function Settings() {
     <div className="min-h-[600px] p-4 bg-gray-50">
       <Card className="max-w-md mx-auto">
         <CardBody className="p-6">
-          <h1 className="text-2xl font-bold mb-4">Settings</h1>
+          <div className="flex items-center mb-4">
+            <Button
+              isIconOnly
+              variant="light"
+              onPress={() => {
+                if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+                  window.location.href = chrome.runtime.getURL('dashboard.html');
+                } else {
+                  router.push('/dashboard');
+                }
+              }}
+              className="mr-2"
+            >
+              <ArrowLeftIcon className="h-6 w-6" />
+            </Button>
+            <h1 className="text-2xl font-bold">Settings</h1>
+          </div>
           <div className="space-y-6">
             {/* Wallet Information Section */}
             <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
