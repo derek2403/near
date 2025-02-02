@@ -6,6 +6,9 @@ import { CHAIN_INFO } from "./constants";
 const rpcOverrides: { [key: number]: string } = {
   43114: "https://rpc.ankr.com/avalanche",
   11155111: "https://eth-sepolia.g.alchemy.com/v2/2iPF_MT9jp-O4mQ0eWd1HpeamV3zWWt4",
+  84532: "https://base-sepolia.g.alchemy.com/v2/2iPF_MT9jp-O4mQ0eWd1HpeamV3zWWt4",
+  11155420: "https://opt-sepolia.g.alchemy.com/v2/2iPF_MT9jp-O4mQ0eWd1HpeamV3zWWt4",
+  421614: "https://arb-sepolia.g.alchemy.com/v2/2iPF_MT9jp-O4mQ0eWd1HpeamV3zWWt4",
 };
 
 // We support all networks exported by viem

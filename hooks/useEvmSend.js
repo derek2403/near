@@ -8,30 +8,50 @@ const CHAIN_IDS = chains.reduce((acc, chain) => ({
   [chain.prefix]: chain.chainId
 }), {});
 
-export const SEPOLIA_CHAIN_ID = 11155111;
+// Create RPC URL mapping
+const RPC_URLS = chains.reduce((acc, chain) => ({
+  ...acc,
+  [chain.chainId]: chain.rpcUrl
+}), {});
 
 export function useEvmSend() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [txHash, setTxHash] = useState('');
 
-  const sendETH = async (toAddress, amountInWei, walletInfo, derivationPath = 'ethereum,1') => {
+  const sendETH = async (toAddress, amountInWei, walletInfo, chainId) => {
     try {
       if (!walletInfo?.accountId || !walletInfo?.privateKey) {
         throw new Error('Wallet info not available');
       }
 
+      // Find the chain configuration
+      const chainConfig = chains.find(chain => chain.chainId === chainId);
+      if (!chainConfig) {
+        throw new Error(`Chain configuration not found for chainId ${chainId}`);
+      }
+
+      // Always use ethereum,1 as derivation path to get consistent addresses across chains
       const evm = await setupAdapter({
         accountId: walletInfo.accountId,
         mpcContractId: process.env.NEXT_PUBLIC_MPC_CONTRACT_ID,
         privateKey: walletInfo.privateKey,
-        derivationPath,
+        derivationPath: 'ethereum,1', // Use consistent derivation path
+        network: {
+          networkId: 'testnet',
+          nodeUrl: 'https://rpc.testnet.near.org',
+          walletUrl: 'https://wallet.testnet.near.org',
+          helperUrl: 'https://helper.testnet.near.org',
+          explorerUrl: 'https://explorer.testnet.near.org'
+        }
       });
 
       const result = await evm.signAndSendTransaction({
         to: toAddress,
         value: amountInWei,
-        chainId: SEPOLIA_CHAIN_ID,
+        chainId,
+        gasLimit: BigInt(21000),
+        rpcUrl: chainConfig.rpcUrl
       });
 
       console.log("Transaction sent successfully!", result);
@@ -54,7 +74,6 @@ export function useEvmSend() {
     setTxHash('');
 
     try {
-      const derivationPath = `${selectedChain.prefix},1`;
       const amountInWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
       
       const walletInfo = {
@@ -66,7 +85,7 @@ export function useEvmSend() {
         recipientAddress,
         amountInWei,
         walletInfo,
-        derivationPath
+        selectedChain.chainId
       );
 
       if (!result?.hash) {
@@ -88,7 +107,8 @@ export function useEvmSend() {
 
   const getExplorerUrl = (hash, selectedChain) => {
     if (!hash || !selectedChain?.explorerUrl) return '';
-    return `${selectedChain.explorerUrl}tx/${hash}`;
+    const baseUrl = selectedChain.explorerUrl.replace('address/', '');
+    return `${baseUrl}tx/${hash}`;
   };
 
   return {
